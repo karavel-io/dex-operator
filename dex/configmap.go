@@ -63,7 +63,7 @@ func ConfigMap(dex *dexv1alpha1.Dex) (v1.ConfigMap, error) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-config", dex.Name),
 			Namespace: dex.Namespace,
-			Labels:    dex.Labels(),
+			Labels:    dex.Spec.InstanceLabels,
 		},
 		Data: map[string]string{
 			"config.yaml": s.String(),

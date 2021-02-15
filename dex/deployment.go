@@ -4,14 +4,22 @@ import (
 	"crypto/sha256"
 	"fmt"
 	dexv1alpha1 "github.com/mikamai/dex-operator/api/v1alpha1"
+	"github.com/mikamai/dex-operator/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
+const (
+	ServiceMarkerLabel   = "dex.karavel.io/service"
+	ServiceMarkerApi     = "api"
+	ServiceMarkerMetrics = "metrics"
+)
+
 func Service(dex *dexv1alpha1.Dex) v1.Service {
-	labels := dex.Labels()
+	labels := utils.ShallowCopyLabels(dex.Spec.InstanceLabels)
+	labels[ServiceMarkerLabel] = ServiceMarkerApi
 	return v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dex.ServiceName(),
@@ -19,7 +27,7 @@ func Service(dex *dexv1alpha1.Dex) v1.Service {
 			Labels:    labels,
 		},
 		Spec: v1.ServiceSpec{
-			Selector: labels,
+			Selector: dex.Spec.InstanceLabels,
 			Type:     v1.ServiceTypeClusterIP,
 			Ports: []v1.ServicePort{
 				{
@@ -40,7 +48,8 @@ func Service(dex *dexv1alpha1.Dex) v1.Service {
 }
 
 func MetricsService(dex *dexv1alpha1.Dex) v1.Service {
-	labels := dex.Labels()
+	labels := utils.ShallowCopyLabels(dex.Spec.InstanceLabels)
+	labels[ServiceMarkerLabel] = ServiceMarkerMetrics
 	return v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dex.ServiceName() + "-metrics",
@@ -48,7 +57,7 @@ func MetricsService(dex *dexv1alpha1.Dex) v1.Service {
 			Labels:    labels,
 		},
 		Spec: v1.ServiceSpec{
-			Selector: labels,
+			Selector: dex.Spec.InstanceLabels,
 			Type:     v1.ServiceTypeClusterIP,
 			Ports: []v1.ServicePort{
 				{
@@ -64,7 +73,7 @@ func MetricsService(dex *dexv1alpha1.Dex) v1.Service {
 
 func Deployment(dex *dexv1alpha1.Dex, cm *v1.ConfigMap, sa *v1.ServiceAccount) appsv1.Deployment {
 	csum := fmt.Sprintf("%x", sha256.Sum256([]byte(cm.Data["config.yaml"])))
-	labels := dex.Labels()
+	labels := dex.Spec.InstanceLabels
 	return appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dex.ServiceName(),

@@ -36,6 +36,9 @@ type DexClientSpec struct {
 	// Public marks the client as a public OAuth client
 	// +kubebuilder:default:=false
 	Public bool `json:"public,omitempty"`
+
+	// InstanceSelector is used to select the target Dex instance
+	InstanceSelector *metav1.LabelSelector `json:"instanceSelector"`
 }
 
 // DexClientStatus defines the observed state of DexClient

@@ -18,11 +18,13 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"github.com/go-logr/logr"
 	"github.com/mikamai/dex-operator/dex"
 	"github.com/mikamai/dex-operator/utils"
 	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -52,11 +54,25 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	var d dexv1alpha1.Dex
-	key := req.NamespacedName
-	key.Name = dc.Labels[dexv1alpha1.DexLabel]
-	if err := r.Client.Get(ctx, key, &d); err != nil {
-		return ctrl.Result{RequeueAfter: requeueAfter}, err
+	sel := dc.Spec.InstanceSelector
+	if sel.MatchLabels == nil {
+		sel.MatchLabels = make(map[string]string)
+	}
+
+	sel.MatchLabels[dex.ServiceMarkerLabel] = dex.ServiceMarkerApi
+	selector, err := metav1.LabelSelectorAsSelector(sel)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	var list v1.ServiceList
+	err = r.Client.List(ctx, &list, client.MatchingLabelsSelector{Selector: selector})
+	if err != nil {
+		return ctrl.Result{RequeueAfter: requeueAfter}, errors.Wrap(err, "failed to fetch Dex services list")
+	}
+
+	if len(list.Items) == 0 {
+		return ctrl.Result{}, errors.New("no Dex services found")
 	}
 
 	finalizer := "clients.finalizers.dex.karavel.io"
@@ -69,11 +85,14 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 	} else {
 		if utils.ContainsString(dc.ObjectMeta.Finalizers, finalizer) {
-			// our finalizer is present, so lets handle any external dependency
-			if err := dex.DeleteDexClient(ctx, log, &d, &dc); err != nil {
-				// if fail to delete the external dependency here, return with error
-				// so that it can be retried
-				return ctrl.Result{RequeueAfter: requeueAfter}, err
+			for _, svc := range list.Items {
+
+				// our finalizer is present, so lets handle any external dependency
+				if err := dex.DeleteDexClient(ctx, log, &svc, &dc); err != nil {
+					// if fail to delete the external dependency here, return with error
+					// so that it can be retried
+					return ctrl.Result{RequeueAfter: requeueAfter}, err
+				}
 			}
 
 			// remove our finalizer from the list and update it.
@@ -87,27 +106,30 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, nil
 	}
 
-	var secret string
-	if !dc.Spec.Public {
-		sec, s, err := dex.Secret(&d, &dc)
-		if err != nil {
-			return ctrl.Result{}, err
+	for _, svc := range list.Items {
+		l := log.WithValues("dex", fmt.Sprintf("%s/%s", svc.Namespace, svc.Name))
+		var secret string
+		if !dc.Spec.Public {
+			sec, s, err := dex.Secret(&dc)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			seco := new(v1.Secret)
+			seco.Name = sec.Name
+			seco.Namespace = sec.Namespace
+			_, err = ctrl.CreateOrUpdate(ctx, r.Client, seco, func() error {
+				seco.Data = sec.Data
+				seco.StringData = sec.StringData
+				return controllerutil.SetControllerReference(&dc, seco, r.Scheme)
+			})
+			if err != nil {
+				return ctrl.Result{RequeueAfter: requeueAfter}, errors.Wrap(err, "failed to reconcile ConfigMap")
+			}
+			secret = s
 		}
-		seco := new(v1.Secret)
-		seco.Name = sec.Name
-		seco.Namespace = sec.Namespace
-		_, err = ctrl.CreateOrUpdate(ctx, r.Client, seco, func() error {
-			seco.Data = sec.Data
-			seco.StringData = sec.StringData
-			return controllerutil.SetControllerReference(&dc, seco, r.Scheme)
-		})
-		if err != nil {
-			return ctrl.Result{RequeueAfter: requeueAfter}, errors.Wrap(err, "failed to reconcile ConfigMap")
+		if err := dex.AssertDexClient(ctx, l, &svc, &dc, secret); err != nil {
+			return ctrl.Result{RequeueAfter: requeueAfter}, err
 		}
-		secret = s
-	}
-	if err := dex.AssertDexClient(ctx, log, &d, &dc, secret); err != nil {
-		return ctrl.Result{RequeueAfter: requeueAfter}, err
 	}
 
 	return ctrl.Result{}, nil

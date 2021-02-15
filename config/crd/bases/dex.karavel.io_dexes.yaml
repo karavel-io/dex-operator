@@ -89,6 +89,12 @@ spec:
                       type: object
                   type: object
                 type: array
+              instanceLabels:
+                additionalProperties:
+                  type: string
+                description: Labels is a set of labels that will be applied to the
+                  instance resources
+                type: object
               publicHost:
                 description: PublicHost is the publicly reachable Host for the Dex
                   instance
@@ -104,6 +110,7 @@ spec:
                 type: string
             required:
             - connectors
+            - instanceLabels
             - publicHost
             type: object
           status:

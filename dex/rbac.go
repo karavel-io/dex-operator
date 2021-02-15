@@ -12,7 +12,7 @@ func ServiceAccount(dex *dexv1alpha1.Dex) v1.ServiceAccount {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dex.Name,
 			Namespace: dex.Namespace,
-			Labels:    dex.Labels(),
+			Labels:    dex.Spec.InstanceLabels,
 		},
 	}
 }
@@ -41,7 +41,7 @@ func ClusterRoleBinding(dex *dexv1alpha1.Dex, sa *v1.ServiceAccount, role *rbacv
 	return rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   dex.Name,
-			Labels: dex.Labels(),
+			Labels: dex.Spec.InstanceLabels,
 		},
 		Subjects: []rbacv1.Subject{
 			{

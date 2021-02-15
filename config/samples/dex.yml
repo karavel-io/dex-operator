@@ -5,6 +5,8 @@ metadata:
   namespace: default
 spec:
   publicHost: dex.example.com
+  instanceLabels:
+    dex.karavel.io/instance: example
   connectors:
     - type: mockCallback
       id: mock
@@ -28,6 +30,8 @@ metadata:
 spec:
   publicHost: dex.example.com
   replicas: 1
+  instanceLabels:
+    dex.karavel.io/instance: github
   envFrom:
     - secretRef:
         name: github-dex-secrets

@@ -14,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func Secret(d *dexv1alpha1.Dex, dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
+func Secret(dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
 	secret, err := utils.GenerateRandomString(15)
 	if err != nil {
 		return v1.Secret{}, "", err
@@ -22,7 +22,7 @@ func Secret(d *dexv1alpha1.Dex, dc *dexv1alpha1.DexClient) (v1.Secret, string, e
 
 	return v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s-credentials", d.Name, dc.Name),
+			Name:      fmt.Sprintf("dex-%s-credentials", dc.Name),
 			Namespace: dc.Namespace,
 		},
 		StringData: map[string]string{
@@ -32,8 +32,8 @@ func Secret(d *dexv1alpha1.Dex, dc *dexv1alpha1.DexClient) (v1.Secret, string, e
 	}, secret, nil
 }
 
-func AssertDexClient(ctx context.Context, log logr.Logger, dex *dexv1alpha1.Dex, client *dexv1alpha1.DexClient, secret string) error {
-	a, err := buildDexApi(dex, "")
+func AssertDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, client *dexv1alpha1.DexClient, secret string) error {
+	a, err := buildDexApi(svc, "")
 	if err != nil {
 		return err
 	}
@@ -86,8 +86,8 @@ func AssertDexClient(ctx context.Context, log logr.Logger, dex *dexv1alpha1.Dex,
 	return nil
 }
 
-func DeleteDexClient(ctx context.Context, log logr.Logger, dex *dexv1alpha1.Dex, client *dexv1alpha1.DexClient) error {
-	a, err := buildDexApi(dex, "")
+func DeleteDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, client *dexv1alpha1.DexClient) error {
+	a, err := buildDexApi(svc, "")
 	if err != nil {
 		return err
 	}
@@ -106,13 +106,13 @@ func DeleteDexClient(ctx context.Context, log logr.Logger, dex *dexv1alpha1.Dex,
 	return nil
 }
 
-func buildDexApi(dex *dexv1alpha1.Dex, caPath string) (api.DexClient, error) {
-	host := fmt.Sprintf("%s.%s:%d", dex.ServiceName(), dex.Namespace, 5557)
+func buildDexApi(svc *v1.Service, caPath string) (api.DexClient, error) {
+	host := fmt.Sprintf("%s.%s:%d", svc.Name, svc.Namespace, 5557)
 	opts := make([]grpc.DialOption, 0)
 	if caPath != "" {
 		creds, err := credentials.NewClientTLSFromFile(caPath, "")
 		if err != nil {
-			return nil, fmt.Errorf("load dex cert: %v", err)
+			return nil, fmt.Errorf("load svc cert: %v", err)
 		}
 		opts = append(opts, grpc.WithTransportCredentials(creds))
 	} else {

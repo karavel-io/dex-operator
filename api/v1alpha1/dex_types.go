@@ -27,7 +27,6 @@ import (
 
 const (
 	DexDefaultVersion = "2.26.0"
-	DexLabel          = "dex.karavel.io/instance"
 )
 
 type Connector struct {
@@ -57,6 +56,9 @@ type DexSpec struct {
 	// EnvFrom is a reference to an environment variables source for the Dex pods
 	// +optional
 	EnvFrom []v1.EnvFromSource `json:"envFrom,omitempty"`
+
+	// Labels is a set of labels that will be applied to the instance resources
+	InstanceLabels map[string]string `json:"instanceLabels"`
 }
 
 // DexStatus defines the observed state of Dex
@@ -131,12 +133,6 @@ func (in *Dex) BuildOwnerReference() metav1.OwnerReference {
 		Kind:       in.Kind,
 		Name:       in.Name,
 		UID:        in.UID,
-	}
-}
-
-func (in *Dex) Labels() map[string]string {
-	return map[string]string{
-		DexLabel: in.Name,
 	}
 }
 

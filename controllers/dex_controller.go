@@ -146,6 +146,7 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	svco.Name = svc.Name
 	svco.Namespace = svc.Namespace
 	_, err = ctrl.CreateOrUpdate(ctx, r.Client, svco, func() error {
+		svco.Labels = svc.Labels
 		if svco.CreationTimestamp.IsZero() {
 			svco.Spec.Selector = svc.Spec.Selector
 		}
@@ -162,6 +163,7 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	msvco.Name = msvc.Name
 	msvco.Namespace = msvc.Namespace
 	_, err = ctrl.CreateOrUpdate(ctx, r.Client, msvco, func() error {
+		msvco.Labels = msvc.Labels
 		if msvco.CreationTimestamp.IsZero() {
 			msvco.Spec.Selector = msvc.Spec.Selector
 		}
@@ -190,6 +192,7 @@ func (r *DexReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&rbacv1.ClusterRole{}).
 		Owns(&rbacv1.ClusterRoleBinding{}).
 		Owns(&appsv1.Deployment{}).
+		Owns(&v1.Service{}).
 		Complete(r)
 }
 
