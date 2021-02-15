@@ -1,0 +1,20 @@
+# permissions for end users to view dexclients.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dexclient-viewer-role
+rules:
+- apiGroups:
+  - dex.karavel.io
+  resources:
+  - dexclients
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - dex.karavel.io
+  resources:
+  - dexclients/status
+  verbs:
+  - get

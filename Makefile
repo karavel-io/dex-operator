@@ -1,6 +1,6 @@
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
+IMG ?= quay.io/karavel/dex-operator:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true,crdVersions=v1"
 
@@ -55,12 +55,16 @@ generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 # Build the docker image
-docker-build: test
+docker-build: manager
 	docker build . -t ${IMG}
 
 # Push the docker image
 docker-push:
 	docker push ${IMG}
+
+# Load the docker image in Kind
+docker-load: docker-build
+	kind load docker-image --name dex-operator ${IMG}
 
 # find or download controller-gen
 # download controller-gen if necessary

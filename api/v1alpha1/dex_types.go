@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
@@ -26,6 +27,7 @@ import (
 
 const (
 	DexDefaultVersion = "2.26.0"
+	DexLabel          = "dex.karavel.io/instance"
 )
 
 type Connector struct {
@@ -134,7 +136,7 @@ func (in *Dex) BuildOwnerReference() metav1.OwnerReference {
 
 func (in *Dex) Labels() map[string]string {
 	return map[string]string{
-		"dex.karavel.io/instance": in.Name,
+		DexLabel: in.Name,
 	}
 }
 
@@ -144,4 +146,8 @@ func (in *Dex) Version() string {
 	}
 
 	return strings.TrimPrefix(in.Spec.Version, "v")
+}
+
+func (in *Dex) ServiceName() string {
+	return fmt.Sprintf("%s-operated", in.Name)
 }

@@ -24,7 +24,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -46,20 +45,20 @@ type DexReconciler struct {
 
 // +kubebuilder:rbac:groups=dex.karavel.io,resources=dexes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=dex.karavel.io,resources=dexes/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups="",resources=configmaps;serviceaccounts;services,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=dex.coreos.com,resources=*,verbs=*
+// +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=create
 
 func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("dex", req.NamespacedName)
 
 	log.Info("reconciling Dex resource")
-	d := dexv1alpha1.Dex{}
+	var d dexv1alpha1.Dex
 	if err := r.Get(ctx, req.NamespacedName, &d); err != nil {
-		if kuberrors.IsNotFound(err) {
-			return ctrl.Result{}, nil
-		}
-
-		log.Error(err, "failed to retrieve Dex resource")
-		return ctrl.Result{}, err
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	cm, err := dex.ConfigMap(&d)
@@ -140,6 +139,38 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	})
 	if err != nil {
 		return ctrl.Result{RequeueAfter: requeueAfter}, errors.Wrap(err, "failed to reconcile Deployment")
+	}
+
+	svc := dex.Service(&d)
+	svco := new(v1.Service)
+	svco.Name = svc.Name
+	svco.Namespace = svc.Namespace
+	_, err = ctrl.CreateOrUpdate(ctx, r.Client, svco, func() error {
+		if svco.CreationTimestamp.IsZero() {
+			svco.Spec.Selector = svc.Spec.Selector
+		}
+		svco.Spec.Type = svc.Spec.Type
+		svco.Spec.Ports = svc.Spec.Ports
+		return controllerutil.SetControllerReference(&d, svco, r.Scheme)
+	})
+	if err != nil {
+		return ctrl.Result{RequeueAfter: requeueAfter}, errors.Wrap(err, "failed to reconcile Service")
+	}
+
+	msvc := dex.MetricsService(&d)
+	msvco := new(v1.Service)
+	msvco.Name = msvc.Name
+	msvco.Namespace = msvc.Namespace
+	_, err = ctrl.CreateOrUpdate(ctx, r.Client, msvco, func() error {
+		if msvco.CreationTimestamp.IsZero() {
+			msvco.Spec.Selector = msvc.Spec.Selector
+		}
+		msvco.Spec.Type = msvc.Spec.Type
+		msvco.Spec.Ports = msvc.Spec.Ports
+		return controllerutil.SetControllerReference(&d, msvco, r.Scheme)
+	})
+	if err != nil {
+		return ctrl.Result{RequeueAfter: requeueAfter}, errors.Wrap(err, "failed to reconcile metrics Service")
 	}
 
 	if err := r.updateDexStatus(ctx, &d, dexv1alpha1.DexCondition{

@@ -4,4 +4,7 @@ resources:
 - group: dex
   kind: Dex
   version: v1alpha1
+- group: dex
+  kind: DexClient
+  version: v1alpha1
 version: "2"

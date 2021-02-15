@@ -18,9 +18,13 @@ package main
 
 import (
 	"flag"
+	"go.uber.org/zap/zapcore"
 	"os"
 	"time"
 
+	zaplogfmt "github.com/sykesm/zap-logfmt"
+
+	uzap "go.uber.org/zap"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
@@ -55,7 +59,12 @@ func main() {
 	flag.DurationVar(&syncPeriod, "sync-period", 10*time.Hour, "Minimum frequency at which watched resources are reconciled.")
 	flag.Parse()
 
-	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	configLog := uzap.NewProductionEncoderConfig()
+	configLog.EncodeTime = func(ts time.Time, encoder zapcore.PrimitiveArrayEncoder) {
+		encoder.AppendString(ts.UTC().Format(time.RFC3339Nano))
+	}
+	logfmtEncoder := zaplogfmt.NewEncoder(configLog)
+	ctrl.SetLogger(zap.New(zap.UseDevMode(true), zap.Encoder(logfmtEncoder)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
@@ -76,6 +85,14 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Dex")
+		os.Exit(1)
+	}
+	if err = (&controllers.DexClientReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("DexClient"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "DexClient")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

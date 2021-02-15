@@ -1,0 +1,11 @@
+apiVersion: dex.karavel.io/v1alpha1
+kind: DexClient
+metadata:
+  name: dexclient-sample
+  labels:
+    dex.karavel.io/instance: github
+spec:
+  id: example
+  name: Example
+  redirectUris:
+    - https://example.com/oauth/callback

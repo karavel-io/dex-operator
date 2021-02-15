@@ -10,18 +10,66 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func Deployment(dex *dexv1alpha1.Dex, cm *v1.ConfigMap, sa *v1.ServiceAccount) appsv1.Deployment {
+func Service(dex *dexv1alpha1.Dex) v1.Service {
 	labels := dex.Labels()
-	csum := sha256.Sum256([]byte(cm.Data["config.yaml"]))
+	return v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dex.ServiceName(),
+			Namespace: dex.Namespace,
+			Labels:    labels,
+		},
+		Spec: v1.ServiceSpec{
+			Selector: labels,
+			Type:     v1.ServiceTypeClusterIP,
+			Ports: []v1.ServicePort{
+				{
+					Name:       "https",
+					Port:       5556,
+					Protocol:   v1.ProtocolTCP,
+					TargetPort: intstr.FromString("https"),
+				},
+				{
+					Name:       "grpc",
+					Port:       5557,
+					Protocol:   v1.ProtocolTCP,
+					TargetPort: intstr.FromString("grpc"),
+				},
+			},
+		},
+	}
+}
+
+func MetricsService(dex *dexv1alpha1.Dex) v1.Service {
+	labels := dex.Labels()
+	return v1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      dex.ServiceName() + "-metrics",
+			Namespace: dex.Namespace,
+			Labels:    labels,
+		},
+		Spec: v1.ServiceSpec{
+			Selector: labels,
+			Type:     v1.ServiceTypeClusterIP,
+			Ports: []v1.ServicePort{
+				{
+					Name:       "metrics",
+					Port:       5558,
+					Protocol:   v1.ProtocolTCP,
+					TargetPort: intstr.FromString("metrics"),
+				},
+			},
+		},
+	}
+}
+
+func Deployment(dex *dexv1alpha1.Dex, cm *v1.ConfigMap, sa *v1.ServiceAccount) appsv1.Deployment {
+	csum := fmt.Sprintf("%x", sha256.Sum256([]byte(cm.Data["config.yaml"])))
+	labels := dex.Labels()
 	return appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:            fmt.Sprintf("%s-operated", dex.Name),
-			Namespace:       dex.Namespace,
-			OwnerReferences: []metav1.OwnerReference{dex.BuildOwnerReference()},
-			Labels:          labels,
-			Annotations: map[string]string{
-				"config/checksum": fmt.Sprintf("%x", csum),
-			},
+			Name:      dex.ServiceName(),
+			Namespace: dex.Namespace,
+			Labels:    labels,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &dex.Spec.Replicas,
@@ -31,6 +79,9 @@ func Deployment(dex *dexv1alpha1.Dex, cm *v1.ConfigMap, sa *v1.ServiceAccount) a
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
+					Annotations: map[string]string{
+						"config/checksum": csum,
+					},
 				},
 				Spec: v1.PodSpec{
 					ServiceAccountName: sa.Name,
