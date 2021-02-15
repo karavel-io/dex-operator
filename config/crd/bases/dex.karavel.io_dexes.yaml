@@ -120,7 +120,6 @@ spec:
                 type: string
             required:
             - connectors
-            - instanceLabels
             - publicHost
             type: object
           status:

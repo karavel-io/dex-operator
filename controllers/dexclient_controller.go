@@ -23,10 +23,11 @@ import (
 	dexv1alpha1 "github.com/mikamai/dex-operator/api/v1alpha1"
 	"github.com/mikamai/dex-operator/dex"
 	"github.com/mikamai/dex-operator/utils"
-	"github.com/pkg/errors"
 	v1 "k8s.io/api/core/v1"
+	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,13 +44,13 @@ type DexClientReconciler struct {
 
 // +kubebuilder:rbac:groups=dex.karavel.io,resources=dexclients,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=dex.karavel.io,resources=dexclients/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="",resources=secrets;events,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups="",resources=secrets;events,verbs=get;list;watch;create;update;patch;delete
 
 func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("dexclient", req.NamespacedName)
 
-	log.Info("reconciling DexClient resource")
+	log.Info("Reconciling DexClient resource")
 	var dc dexv1alpha1.DexClient
 	if err := r.Get(ctx, req.NamespacedName, &dc); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -63,21 +64,25 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 	}
 
-	sel := dc.Spec.InstanceSelector.DeepCopy()
-	if sel.MatchLabels == nil {
-		sel.MatchLabels = make(map[string]string)
+	var d dexv1alpha1.Dex
+	k := types.NamespacedName{
+		Name:      dc.Spec.InstanceRef.Name,
+		Namespace: dc.Spec.InstanceRef.Namespace,
 	}
-
-	sel.MatchLabels[dex.ServiceMarkerLabel] = dex.ServiceMarkerApi
-	selector, err := metav1.LabelSelectorAsSelector(sel)
-	if err != nil {
+	if k.Namespace == "" {
+		k.Namespace = dc.Namespace
+	}
+	if err := r.Client.Get(ctx, k, &d); err != nil && dc.ObjectMeta.DeletionTimestamp.IsZero() {
 		return r.ManageError(ctx, &dc, err)
 	}
 
-	var list v1.ServiceList
-	err = r.Client.List(ctx, &list, client.MatchingLabelsSelector{Selector: selector})
-	if err != nil {
-		return r.ManageError(ctx, &dc, errors.Wrap(err, "failed to fetch Dex services list"))
+	var svc v1.Service
+	svk := types.NamespacedName{
+		Name:      d.ServiceName(),
+		Namespace: d.Namespace,
+	}
+	if err := r.Client.Get(ctx, svk, &svc); err != nil && dc.ObjectMeta.DeletionTimestamp.IsZero() {
+		return r.ManageError(ctx, &dc, err)
 	}
 
 	finalizer := "clients.finalizers.dex.karavel.io"
@@ -91,8 +96,7 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 	} else {
 		if utils.ContainsString(dc.ObjectMeta.Finalizers, finalizer) {
-			for _, svc := range list.Items {
-
+			if !svc.CreationTimestamp.IsZero() {
 				// our finalizer is present, so lets handle any external dependency
 				op, err := dex.DeleteDexClient(ctx, log, &svc, &dc)
 				if err != nil {
@@ -106,7 +110,7 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			}
 
 			// remove our finalizer from the list and update it.
-			log.Info("removing finalizer")
+			log.Info("Removing finalizer")
 			controllerutil.RemoveFinalizer(&dc, finalizer)
 			if err := r.Update(context.Background(), &dc); err != nil {
 				return r.ManageError(ctx, &dc, err)
@@ -117,43 +121,55 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return r.ManageSuccess(ctx, &dc)
 	}
 
-	if len(list.Items) == 0 {
-		return r.ManageError(ctx, &dc, errors.New("no matching Dex instances found"))
+	var secret string
+	sec, s, err := dex.Secret(&dc)
+	if err != nil {
+		return r.ManageError(ctx, &dc, err)
 	}
 
-	var secret string
-	if !dc.Spec.Public {
-		sec, s, err := dex.Secret(&dc)
-		if err != nil {
+	log.Info("Reconciling Secret")
+	seco := new(v1.Secret)
+	seco.Name = sec.Name
+	seco.Namespace = sec.Namespace
+	sk := types.NamespacedName{
+		Name:      sec.Name,
+		Namespace: sec.Namespace,
+	}
+	if dc.Spec.Public {
+		if err := r.Client.Delete(ctx, seco); err != nil && !kuberrors.IsNotFound(err) {
 			return r.ManageError(ctx, &dc, err)
 		}
-		log.Info("reconciling Secret")
-		seco := new(v1.Secret)
-		seco.Name = sec.Name
-		seco.Namespace = sec.Namespace
-		_, err = ctrl.CreateOrUpdate(ctx, r.Client, seco, func() error {
-			seco.Data = sec.Data
-			return controllerutil.SetControllerReference(&dc, seco, r.Scheme)
-		})
-		if err != nil {
-			return r.ManageError(ctx, &dc, errors.Wrap(err, "failed to reconcile Secret"))
+	} else {
+		err = r.Client.Get(ctx, sk, seco)
+		if err != nil && !kuberrors.IsNotFound(err) {
+			return r.ManageError(ctx, &dc, err)
+		}
+
+		if kuberrors.IsNotFound(err) {
+			log.Info("Secret is missing, creating", "secret", seco.Name)
+			seco.StringData = sec.StringData
+			if err := controllerutil.SetControllerReference(&dc, seco, r.Scheme); err != nil {
+				return r.ManageError(ctx, &dc, err)
+			}
+
+			if err := r.Client.Create(ctx, seco); err != nil {
+				return r.ManageError(ctx, &dc, err)
+			}
 		}
 		secret = s
 	}
 
-	for _, svc := range list.Items {
-		start := metav1.Now()
-		instance := fmt.Sprintf("%s/%s", svc.Namespace, svc.Name)
-		l := log.WithValues("dex", instance)
+	start := metav1.Now()
+	instance := fmt.Sprintf("%s/%s", svc.Namespace, svc.Name)
+	l := log.WithValues("dex", instance)
 
-		op, err := dex.AssertDexClient(ctx, l, &svc, &dc, secret)
-		if err != nil {
-			return r.ManageError(ctx, &dc, err)
-		}
-		if op == dex.OpCreated {
-			r.Recorder.PastEventf(&dc, start, "Normal", "Creating", "Creating on Dex instance %s", instance)
-			r.Recorder.Eventf(&dc, "Normal", "Created", "Created on Dex instance %s", instance)
-		}
+	op, err := dex.AssertDexClient(ctx, l, &svc, &dc, secret)
+	if err != nil {
+		return r.ManageError(ctx, &dc, err)
+	}
+	if op == dex.OpCreated {
+		r.Recorder.PastEventf(&dc, start, "Normal", "Creating", "Creating on Dex instance %s", instance)
+		r.Recorder.Eventf(&dc, "Normal", "Created", "Created on Dex instance %s", instance)
 	}
 
 	return r.ManageSuccess(ctx, &dc)

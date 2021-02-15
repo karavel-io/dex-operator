@@ -35,8 +35,20 @@ type DexClientSpec struct {
 	// +kubebuilder:default:=false
 	Public bool `json:"public,omitempty"`
 
-	// InstanceSelector is used to select the target Dex instance
-	InstanceSelector *metav1.LabelSelector `json:"instanceSelector"`
+	// InstanceRef is used to select the target Dex instance
+	// Cannot be updated
+	InstanceRef InstanceRef `json:"instanceRef"`
+}
+
+type InstanceRef struct {
+	// Name is the object name for the Dex instance
+	// Cannot be updated
+	Name string `json:"name"`
+	// Namespace is the object name for the Dex instance
+	// Cannot be updated
+	// If empty will default to the same namespace as the DexClient
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // DexClientStatus defines the observed state of DexClient

@@ -66,7 +66,8 @@ type DexSpec struct {
 	EnvFrom []v1.EnvFromSource `json:"envFrom,omitempty"`
 
 	// Labels is a set of labels that will be applied to the instance resources
-	InstanceLabels map[string]string `json:"instanceLabels"`
+	// +optional
+	InstanceLabels map[string]string `json:"instanceLabels,omitempty"`
 }
 
 // DexStatus defines the observed state of Dex

@@ -51,7 +51,9 @@ func (in *DexClient) ValidateUpdate(old runtime.Object) error {
 	dexclientlog.Info("validate update", "name", in.Name)
 
 	dco := old.(*DexClient)
-	if in.Spec.InstanceSelector.String() != dco.Spec.InstanceSelector.String() {
+	diff := in.Spec.InstanceRef.Name != dco.Spec.InstanceRef.Name
+	diff = diff || in.Spec.InstanceRef.Namespace != dco.Spec.InstanceRef.Namespace
+	if diff {
 		gr := schema.GroupResource{
 			Group:    "dex.karavel.io",
 			Resource: "dexclients",

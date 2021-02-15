@@ -7,12 +7,8 @@ spec:
   name: Example
   redirectUris:
     - https://example.com/oauth/callback
-  instanceSelector:
-    matchExpressions:
-      - key: dex.karavel.io/instance
-        operator: In
-        values:
-          - github
+  instanceRef:
+    name: github
 ---
 apiVersion: dex.karavel.io/v1alpha1
 kind: DexClient
@@ -21,8 +17,9 @@ metadata:
   namespace: kube-system
 spec:
   name: Example
+  public: true
   redirectUris:
     - https://example.com/oauth/callback
-  instanceSelector:
-    matchLabels:
-      dex.karavel.io/instance: github
+  instanceRef:
+    name: github
+    namespace: default

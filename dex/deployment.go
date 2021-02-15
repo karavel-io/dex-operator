@@ -12,14 +12,12 @@ import (
 )
 
 const (
-	ServiceMarkerLabel   = "dex.karavel.io/service"
-	ServiceMarkerApi     = "api"
-	ServiceMarkerMetrics = "metrics"
+	InstanceMarkerLabel = "dex.karavel.io/instance"
 )
 
 func Service(dex *dexv1alpha1.Dex) v1.Service {
 	labels := utils.ShallowCopyLabels(dex.Spec.InstanceLabels)
-	labels[ServiceMarkerLabel] = ServiceMarkerApi
+	labels[InstanceMarkerLabel] = dex.Name
 	return v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dex.ServiceName(),
@@ -27,7 +25,7 @@ func Service(dex *dexv1alpha1.Dex) v1.Service {
 			Labels:    labels,
 		},
 		Spec: v1.ServiceSpec{
-			Selector: dex.Spec.InstanceLabels,
+			Selector: labels,
 			Type:     v1.ServiceTypeClusterIP,
 			Ports: []v1.ServicePort{
 				{
@@ -49,7 +47,7 @@ func Service(dex *dexv1alpha1.Dex) v1.Service {
 
 func MetricsService(dex *dexv1alpha1.Dex) v1.Service {
 	labels := utils.ShallowCopyLabels(dex.Spec.InstanceLabels)
-	labels[ServiceMarkerLabel] = ServiceMarkerMetrics
+	labels[InstanceMarkerLabel] = dex.Name
 	return v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dex.ServiceName() + "-metrics",
@@ -57,7 +55,7 @@ func MetricsService(dex *dexv1alpha1.Dex) v1.Service {
 			Labels:    labels,
 		},
 		Spec: v1.ServiceSpec{
-			Selector: dex.Spec.InstanceLabels,
+			Selector: labels,
 			Type:     v1.ServiceTypeClusterIP,
 			Ports: []v1.ServicePort{
 				{
@@ -73,7 +71,9 @@ func MetricsService(dex *dexv1alpha1.Dex) v1.Service {
 
 func Deployment(dex *dexv1alpha1.Dex, cm *v1.ConfigMap, sa *v1.ServiceAccount) appsv1.Deployment {
 	csum := fmt.Sprintf("%x", sha256.Sum256([]byte(cm.Data["config.yaml"])))
-	labels := dex.Spec.InstanceLabels
+	labels := utils.ShallowCopyLabels(dex.Spec.InstanceLabels)
+	labels[InstanceMarkerLabel] = dex.Name
+
 	return appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      dex.ServiceName(),
@@ -98,7 +98,7 @@ func Deployment(dex *dexv1alpha1.Dex, cm *v1.ConfigMap, sa *v1.ServiceAccount) a
 						{
 							Name:    "dex",
 							Image:   fmt.Sprintf("quay.io/dexidp/dex:v%s", dex.Version()),
-							Command: []string{"/usr/local/bin/dex"},
+							Command: []string{"dex"},
 							Args:    []string{"serve", "/etc/dex/cfg/config.yaml"},
 							EnvFrom: dex.Spec.EnvFrom,
 							Ports: []v1.ContainerPort{

@@ -59,7 +59,7 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
 	log := r.Log.WithValues("dex", req.NamespacedName)
 
-	log.Info("reconciling Dex resource")
+	log.Info("Reconciling Dex resource")
 	var d dexv1alpha1.Dex
 	if err := r.Get(ctx, req.NamespacedName, &d); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)

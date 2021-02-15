@@ -2,7 +2,6 @@ package dex
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"github.com/dexidp/dex/api/v2"
 	"github.com/go-logr/logr"
@@ -25,28 +24,25 @@ const (
 )
 
 func Secret(dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
-	s, err := utils.GenerateRandomString(15)
+	secret, err := utils.GenerateRandomString(15)
 	if err != nil {
 		return v1.Secret{}, "", err
 	}
-
-	id := base64.StdEncoding.EncodeToString([]byte(dc.ClientID()))
-	secret := base64.StdEncoding.EncodeToString([]byte(s))
 
 	return v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("dex-%s-credentials", dc.Name),
 			Namespace: dc.Namespace,
 		},
-		Data: map[string][]byte{
-			"clientId":     []byte(id),
-			"clientSecret": []byte(secret),
+		StringData: map[string]string{
+			"clientId":     dc.ClientID(),
+			"clientSecret": secret,
 		},
-	}, s, nil
+	}, secret, nil
 }
 
 func AssertDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, client *dexv1alpha1.DexClient, secret string) (Op, error) {
-	a, err := buildDexApi(svc, "")
+	a, err := buildDexApi(log, svc, "")
 	if err != nil {
 		return OpNone, err
 	}
@@ -100,7 +96,7 @@ func AssertDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, clie
 }
 
 func DeleteDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, client *dexv1alpha1.DexClient) (Op, error) {
-	a, err := buildDexApi(svc, "")
+	a, err := buildDexApi(log, svc, "")
 	if err != nil {
 		return OpNone, err
 	}
@@ -124,7 +120,7 @@ func DeleteDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, clie
 	return OpDeleted, nil
 }
 
-func buildDexApi(svc *v1.Service, caPath string) (api.DexClient, error) {
+func buildDexApi(log logr.Logger, svc *v1.Service, caPath string) (api.DexClient, error) {
 	var port *int32
 	for _, p := range svc.Spec.Ports {
 		if p.Name == "grpc" {
@@ -138,6 +134,7 @@ func buildDexApi(svc *v1.Service, caPath string) (api.DexClient, error) {
 	}
 
 	host := fmt.Sprintf("%s.%s:%d", svc.Name, svc.Namespace, *port)
+	log.Info("Opening gRPC connection", "host", host)
 	opts := make([]grpc.DialOption, 0)
 	if caPath != "" {
 		creds, err := credentials.NewClientTLSFromFile(caPath, "")
