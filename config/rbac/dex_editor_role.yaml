@@ -1,0 +1,24 @@
+# permissions for end users to edit dexes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dex-editor-role
+rules:
+- apiGroups:
+  - dex.karavel.io
+  resources:
+  - dexes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dex.karavel.io
+  resources:
+  - dexes/status
+  verbs:
+  - get

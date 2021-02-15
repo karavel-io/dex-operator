@@ -1,0 +1,7 @@
+domain: karavel.io
+repo: github.com/mikamai/dex-operator
+resources:
+- group: dex
+  kind: Dex
+  version: v1alpha1
+version: "2"
