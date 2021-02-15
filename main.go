@@ -1,5 +1,5 @@
 /*
-
+Copyright 2021 © MIKAMAI s.r.l
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,9 +18,10 @@ package main
 
 import (
 	"flag"
-	"go.uber.org/zap/zapcore"
 	"os"
 	"time"
+
+	"go.uber.org/zap/zapcore"
 
 	zaplogfmt "github.com/sykesm/zap-logfmt"
 
@@ -93,6 +94,10 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DexClient")
+		os.Exit(1)
+	}
+	if err = (&dexv1alpha1.DexClient{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "DexClient")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

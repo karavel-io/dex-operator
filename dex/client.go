@@ -26,7 +26,7 @@ func Secret(dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
 			Namespace: dc.Namespace,
 		},
 		StringData: map[string]string{
-			"clientId":     dc.Spec.Id,
+			"clientId":     dc.ClientID(),
 			"clientSecret": secret,
 		},
 	}, secret, nil
@@ -38,7 +38,7 @@ func AssertDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, clie
 		return err
 	}
 
-	id := client.Spec.Id
+	id := client.ClientID()
 	name := client.Spec.Name
 	uris := client.Spec.RedirectUris
 	public := client.Spec.Public
@@ -92,7 +92,7 @@ func DeleteDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, clie
 		return err
 	}
 
-	id := client.Spec.Id
+	id := client.ClientID()
 	name := client.Spec.Name
 	log.Info("Deleting DexClient", "id", id, "name", name)
 	req := &api.DeleteClientReq{
@@ -107,7 +107,19 @@ func DeleteDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, clie
 }
 
 func buildDexApi(svc *v1.Service, caPath string) (api.DexClient, error) {
-	host := fmt.Sprintf("%s.%s:%d", svc.Name, svc.Namespace, 5557)
+	var port *int32
+	for _, p := range svc.Spec.Ports {
+		if p.Name == "grpc" {
+			port = &p.Port
+			break
+		}
+	}
+
+	if port == nil {
+		return nil, errors.Errorf("no port named 'grpc' found in service %s/%s", svc.Namespace, svc.Name)
+	}
+
+	host := fmt.Sprintf("%s.%s:%d", svc.Name, svc.Namespace, *port)
 	opts := make([]grpc.DialOption, 0)
 	if caPath != "" {
 		creds, err := credentials.NewClientTLSFromFile(caPath, "")

@@ -36,9 +36,6 @@ spec:
           spec:
             description: DexClientSpec defines the desired state of DexClient
             properties:
-              id:
-                description: Id is the Dex clientId
-                type: string
               instanceSelector:
                 description: InstanceSelector is used to select the target Dex instance
                 properties:
@@ -98,7 +95,6 @@ spec:
                 minItems: 1
                 type: array
             required:
-            - id
             - instanceSelector
             - name
             - redirectUris

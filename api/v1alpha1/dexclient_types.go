@@ -1,5 +1,5 @@
 /*
-
+Copyright 2021 © MIKAMAI s.r.l
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,14 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // DexClientSpec defines the desired state of DexClient
 type DexClientSpec struct {
-	// Id is the Dex clientId
-	Id string `json:"id"`
-
 	// Name is the Dex client name
 	Name string `json:"name"`
 
@@ -56,6 +54,10 @@ type DexClient struct {
 
 	Spec   DexClientSpec   `json:"spec,omitempty"`
 	Status DexClientStatus `json:"status,omitempty"`
+}
+
+func (in *DexClient) ClientID() string {
+	return fmt.Sprintf("%s-%s", in.Namespace, in.Name)
 }
 
 // +kubebuilder:object:root=true

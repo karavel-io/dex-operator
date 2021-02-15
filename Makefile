@@ -26,7 +26,7 @@ run: generate fmt vet manifests
 	go run ./main.go
 
 # Install CRDs into a cluster
-install: manifests
+install: manifests cert-manager
 	kustomize build config/crd | kubectl apply -f -
 
 # Uninstall CRDs from a cluster
@@ -65,6 +65,9 @@ docker-push:
 # Load the docker image in Kind
 docker-load: docker-build
 	kind load docker-image --name dex-operator ${IMG}
+
+cert-manager:
+	kustomize build config/certmanager | kubectl apply -f -
 
 # find or download controller-gen
 # download controller-gen if necessary

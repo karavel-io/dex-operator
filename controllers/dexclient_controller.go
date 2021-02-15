@@ -1,5 +1,5 @@
 /*
-
+Copyright 2021 © MIKAMAI s.r.l
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	sel := dc.Spec.InstanceSelector
+	sel := dc.Spec.InstanceSelector.DeepCopy()
 	if sel.MatchLabels == nil {
 		sel.MatchLabels = make(map[string]string)
 	}

@@ -1,9 +1,9 @@
 apiVersion: dex.karavel.io/v1alpha1
 kind: DexClient
 metadata:
-  name: dexclient-sample
+  name: example
+  namespace: default
 spec:
-  id: example
   name: Example
   redirectUris:
     - https://example.com/oauth/callback
@@ -14,16 +14,16 @@ spec:
         values:
           - github
 ---
-#apiVersion: dex.karavel.io/v1alpha1
-#kind: DexClient
-#metadata:
-#  name: dexclient-sample
-#  namespace: kube-system
-#spec:
-#  id: example
-#  name: Example
-#  redirectUris:
-#    - https://example.com/oauth/callback
-#  instanceSelector:
-#    matchLabels:
-#      dex.karavel.io/instance: github
+apiVersion: dex.karavel.io/v1alpha1
+kind: DexClient
+metadata:
+  name: example
+  namespace: kube-system
+spec:
+  name: Example
+  redirectUris:
+    - https://example.com/oauth/callback
+    - https://example.com/oauth/callback2
+  instanceSelector:
+    matchLabels:
+      dex.karavel.io/instance: github
