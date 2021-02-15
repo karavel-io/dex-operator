@@ -10,6 +10,7 @@ rules:
   - ""
   resources:
   - configmaps
+  - events
   - serviceaccounts
   - services
   verbs:
@@ -22,6 +23,7 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - events
   - secrets
   verbs:
   - create

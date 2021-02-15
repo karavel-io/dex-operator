@@ -41,11 +41,22 @@ type DexClientSpec struct {
 
 // DexClientStatus defines the observed state of DexClient
 type DexClientStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Phase is the current phase of the operator.
+	Phase StatusPhase `json:"phase"`
+	// Message is a human-readable message indicating details about current operator phase or error.
+	Message string `json:"message"`
+	// Ready will be true if the client is in a ready state and available for use.
+	Ready bool `json:"ready"`
+	// ClientID is the generated OAuth client_id for this client
+	ClientID string `json:"clientID,omitempty"`
 }
 
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:path=dexclients
+// +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Client ID",type=string,JSONPath=`.status.clientID`
+// +kubebuilder:printcolumn:name="Ready",type=boolean,JSONPath=`.status.ready`
+// +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
 
 // DexClient is the Schema for the dexclients API
 type DexClient struct {

@@ -2,6 +2,7 @@ package dex
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"github.com/dexidp/dex/api/v2"
 	"github.com/go-logr/logr"
@@ -14,28 +15,40 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+type Op string
+
+const (
+	OpNone    Op = "none"
+	OpCreated    = "created"
+	OpUpdated    = "updated"
+	OpDeleted    = "deleted"
+)
+
 func Secret(dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
-	secret, err := utils.GenerateRandomString(15)
+	s, err := utils.GenerateRandomString(15)
 	if err != nil {
 		return v1.Secret{}, "", err
 	}
+
+	id := base64.StdEncoding.EncodeToString([]byte(dc.ClientID()))
+	secret := base64.StdEncoding.EncodeToString([]byte(s))
 
 	return v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("dex-%s-credentials", dc.Name),
 			Namespace: dc.Namespace,
 		},
-		StringData: map[string]string{
-			"clientId":     dc.ClientID(),
-			"clientSecret": secret,
+		Data: map[string][]byte{
+			"clientId":     []byte(id),
+			"clientSecret": []byte(secret),
 		},
-	}, secret, nil
+	}, s, nil
 }
 
-func AssertDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, client *dexv1alpha1.DexClient, secret string) error {
+func AssertDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, client *dexv1alpha1.DexClient, secret string) (Op, error) {
 	a, err := buildDexApi(svc, "")
 	if err != nil {
-		return err
+		return OpNone, err
 	}
 
 	id := client.ClientID()
@@ -45,11 +58,11 @@ func AssertDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, clie
 	log.Info("Asserting DexClient", "id", id, "name", name, "redirectUris", uris, "public", public)
 
 	if public && secret != "" {
-		return errors.New("a public client cannot have a secret")
+		return OpNone, errors.New("a public client cannot have a secret")
 	}
 
 	if !public && secret == "" {
-		return errors.New("a confidential client must have a secret")
+		return OpNone, errors.New("a confidential client must have a secret")
 	}
 
 	creq := &api.CreateClientReq{
@@ -64,12 +77,12 @@ func AssertDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, clie
 
 	cres, err := a.CreateClient(ctx, creq)
 	if err != nil {
-		return err
+		return OpNone, err
 	}
 
 	if !cres.AlreadyExists {
 		log.Info("Created DexClient", "id", id, "name", name, "redirectUris", uris, "public", public)
-		return nil
+		return OpCreated, nil
 	}
 
 	ureq := &api.UpdateClientReq{
@@ -79,17 +92,17 @@ func AssertDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, clie
 	}
 
 	if _, err := a.UpdateClient(ctx, ureq); err != nil {
-		return err
+		return OpNone, err
 	}
 
 	log.Info("Updated DexClient", "id", id, "name", name, "redirectUris", uris, "public", public)
-	return nil
+	return OpUpdated, nil
 }
 
-func DeleteDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, client *dexv1alpha1.DexClient) error {
+func DeleteDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, client *dexv1alpha1.DexClient) (Op, error) {
 	a, err := buildDexApi(svc, "")
 	if err != nil {
-		return err
+		return OpNone, err
 	}
 
 	id := client.ClientID()
@@ -98,12 +111,17 @@ func DeleteDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, clie
 	req := &api.DeleteClientReq{
 		Id: id,
 	}
-	if _, err := a.DeleteClient(ctx, req); err != nil {
-		return err
+	res, err := a.DeleteClient(ctx, req)
+	if err != nil {
+		return OpNone, err
+	}
+
+	if res.NotFound {
+		return OpNone, nil
 	}
 
 	log.Info("Deleted DexClient", "id", id, "name", name)
-	return nil
+	return OpDeleted, nil
 }
 
 func buildDexApi(svc *v1.Service, caPath string) (api.DexClient, error) {

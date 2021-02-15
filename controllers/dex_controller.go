@@ -26,6 +26,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -34,18 +35,21 @@ import (
 	dexv1alpha1 "github.com/mikamai/dex-operator/api/v1alpha1"
 )
 
-var requeueAfter = 5 * time.Second
+var (
+	requeueAfterError = 5 * time.Second
+)
 
 // DexReconciler reconciles a Dex object
 type DexReconciler struct {
 	client.Client
-	Log    logr.Logger
-	Scheme *runtime.Scheme
+	Log      logr.Logger
+	Scheme   *runtime.Scheme
+	Recorder record.EventRecorder
 }
 
 // +kubebuilder:rbac:groups=dex.karavel.io,resources=dexes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=dex.karavel.io,resources=dexes/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="",resources=configmaps;serviceaccounts;services,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups="",resources=events;configmaps;serviceaccounts;services,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=dex.coreos.com,resources=*,verbs=*
@@ -61,9 +65,19 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	first := d.CreationTimestamp.IsZero()
+	if first && d.Status.Phase != dexv1alpha1.PhaseInitialising {
+		d.Status.Phase = dexv1alpha1.PhaseInitialising
+		d.Status.Ready = false
+		if err := r.Client.Status().Update(ctx, &d); err != nil {
+			return r.ManageError(ctx, &d, err)
+		}
+	}
+
+	start := metav1.Now()
 	cm, err := dex.ConfigMap(&d)
 	if err != nil {
-		return ctrl.Result{RequeueAfter: requeueAfter}, err
+		return ctrl.Result{RequeueAfter: requeueAfterError}, err
 	}
 	cmo := new(v1.ConfigMap)
 	cmo.Name = cm.Name
@@ -76,7 +90,7 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return controllerutil.SetControllerReference(&d, cmo, r.Scheme)
 	})
 	if err != nil {
-		return ctrl.Result{RequeueAfter: requeueAfter}, errors.Wrap(err, "failed to reconcile ConfigMap")
+		return r.ManageError(ctx, &d, errors.Wrap(err, "failed to reconcile ConfigMap"))
 	}
 
 	sa := dex.ServiceAccount(&d)
@@ -90,7 +104,7 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return controllerutil.SetControllerReference(&d, sao, r.Scheme)
 	})
 	if err != nil {
-		return ctrl.Result{RequeueAfter: requeueAfter}, errors.Wrap(err, "failed to reconcile ServiceAccount")
+		return r.ManageError(ctx, &d, errors.Wrap(err, "failed to reconcile ServiceAccount"))
 	}
 
 	cr := dex.ClusterRole()
@@ -104,7 +118,7 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return nil
 	})
 	if err != nil {
-		return ctrl.Result{RequeueAfter: requeueAfter}, errors.Wrap(err, "failed to reconcile ClusterRole")
+		return r.ManageError(ctx, &d, errors.Wrap(err, "failed to reconcile ClusterRole"))
 	}
 
 	crb := dex.ClusterRoleBinding(&d, &sa, &cr)
@@ -119,7 +133,7 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return nil
 	})
 	if err != nil {
-		return ctrl.Result{RequeueAfter: requeueAfter}, errors.Wrap(err, "failed to reconcile ClusterRoleBinding")
+		return r.ManageError(ctx, &d, errors.Wrap(err, "failed to reconcile ClusterRoleBinding"))
 	}
 
 	dep := dex.Deployment(&d, &cm, &sa)
@@ -138,7 +152,7 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return controllerutil.SetControllerReference(&d, depo, r.Scheme)
 	})
 	if err != nil {
-		return ctrl.Result{RequeueAfter: requeueAfter}, errors.Wrap(err, "failed to reconcile Deployment")
+		return r.ManageError(ctx, &d, errors.Wrap(err, "failed to reconcile Deployment"))
 	}
 
 	svc := dex.Service(&d)
@@ -155,7 +169,7 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return controllerutil.SetControllerReference(&d, svco, r.Scheme)
 	})
 	if err != nil {
-		return ctrl.Result{RequeueAfter: requeueAfter}, errors.Wrap(err, "failed to reconcile Service")
+		return r.ManageError(ctx, &d, errors.Wrap(err, "failed to reconcile Service"))
 	}
 
 	msvc := dex.MetricsService(&d)
@@ -172,17 +186,14 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return controllerutil.SetControllerReference(&d, msvco, r.Scheme)
 	})
 	if err != nil {
-		return ctrl.Result{RequeueAfter: requeueAfter}, errors.Wrap(err, "failed to reconcile metrics Service")
+		return r.ManageError(ctx, &d, errors.Wrap(err, "failed to reconcile metrics Service"))
 	}
 
-	if err := r.updateDexStatus(ctx, &d, dexv1alpha1.DexCondition{
-		Type:   dexv1alpha1.DexReady,
-		Status: "True",
-		Reason: "Reconciled",
-	}); err != nil {
-		return ctrl.Result{RequeueAfter: requeueAfter}, errors.Wrap(err, "failed to update Dex status")
+	if first {
+		r.Recorder.PastEventf(&d, start, "Normal", "Creating", "Creating resources")
+		r.Recorder.Event(&d, "Normal", "Created", "Creating resources")
 	}
-	return ctrl.Result{}, nil
+	return r.ManageSuccess(ctx, &d)
 }
 
 func (r *DexReconciler) SetupWithManager(mgr ctrl.Manager) error {
@@ -196,19 +207,29 @@ func (r *DexReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *DexReconciler) updateDexStatus(ctx context.Context, d *dexv1alpha1.Dex, cond dexv1alpha1.DexCondition) error {
-	cond.LastTransitionTime = metav1.Now()
-	st := d.Status
-	if len(st.Conditions) > 1 {
-		last := st.Conditions[len(st.Conditions)-1]
-		if cond.Status != last.Status {
-			cond.LastTransitionTime = last.LastUpdateTime
-		}
+func (r *DexReconciler) ManageSuccess(ctx context.Context, dex *dexv1alpha1.Dex) (ctrl.Result, error) {
+	dex.Status.Message = "active"
+	dex.Status.Ready = true
+	dex.Status.Phase = dexv1alpha1.PhaseActive
+
+	if err := r.Client.Status().Update(ctx, dex); err != nil {
+		return ctrl.Result{
+			RequeueAfter: requeueAfterError,
+			Requeue:      true,
+		}, err
 	}
-	cond.LastUpdateTime = metav1.Now()
-	st.ObservedGeneration++
-	st.Conditions = append(st.Conditions, cond)
-	d.Status = st
-	//return r.Status().Update(ctx, d)
-	return nil
+	return ctrl.Result{}, nil
+}
+
+func (r *DexReconciler) ManageError(ctx context.Context, dex *dexv1alpha1.Dex, issue error) (ctrl.Result, error) {
+	dex.Status.Message = issue.Error()
+	dex.Status.Ready = false
+	dex.Status.Phase = dexv1alpha1.PhaseFailing
+
+	r.Recorder.Event(dex, "Warning", "Error", issue.Error())
+
+	return ctrl.Result{
+		RequeueAfter: requeueAfterError,
+		Requeue:      true,
+	}, r.Client.Status().Update(ctx, dex)
 }

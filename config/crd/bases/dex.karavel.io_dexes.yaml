@@ -16,7 +16,17 @@ spec:
     singular: dex
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.publicHost
+      name: Host
+      type: string
+    - jsonPath: .status.ready
+      name: Ready
+      type: boolean
+    - jsonPath: .status.message
+      name: Message
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Dex is the Schema for the dexes API
@@ -116,44 +126,21 @@ spec:
           status:
             description: DexStatus defines the observed state of Dex
             properties:
-              conditions:
-                description: Represents the latest available observations of a deployment's
-                  current state.
-                items:
-                  description: DeploymentCondition describes the state of a deployment
-                    at a certain point.
-                  properties:
-                    lastTransitionTime:
-                      description: Last time the condition transitioned from one status
-                        to another.
-                      format: date-time
-                      type: string
-                    lastUpdateTime:
-                      description: The last time this condition was updated.
-                      format: date-time
-                      type: string
-                    message:
-                      description: A human readable message indicating details about
-                        the transition.
-                      type: string
-                    reason:
-                      description: The reason for the condition's last transition.
-                      type: string
-                    status:
-                      description: Status of the condition, one of True, False, Unknown.
-                      type: string
-                    type:
-                      description: Type of deployment condition.
-                      type: string
-                  required:
-                  - status
-                  - type
-                  type: object
-                type: array
-              observedGeneration:
-                description: The generation observed by the Dex controller.
-                format: int64
-                type: integer
+              message:
+                description: Human-readable message indicating details about current
+                  operator phase or error.
+                type: string
+              phase:
+                description: Current phase of the operator.
+                type: string
+              ready:
+                description: True if the instance is in a ready state and available
+                  for use.
+                type: boolean
+            required:
+            - message
+            - phase
+            - ready
             type: object
         type: object
     served: true

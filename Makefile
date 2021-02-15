@@ -67,7 +67,7 @@ docker-load: docker-build
 	kind load docker-image --name dex-operator ${IMG}
 
 cert-manager:
-	kustomize build config/certmanager | kubectl apply -f -
+	kubectl apply -f config/cert-manager.yaml
 
 # find or download controller-gen
 # download controller-gen if necessary

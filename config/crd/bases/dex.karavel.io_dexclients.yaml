@@ -16,7 +16,17 @@ spec:
     singular: dexclient
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.clientID
+      name: Client ID
+      type: string
+    - jsonPath: .status.ready
+      name: Ready
+      type: boolean
+    - jsonPath: .status.message
+      name: Message
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: DexClient is the Schema for the dexclients API
@@ -101,10 +111,31 @@ spec:
             type: object
           status:
             description: DexClientStatus defines the observed state of DexClient
+            properties:
+              clientID:
+                description: ClientID is the generated OAuth client_id for this client
+                type: string
+              message:
+                description: Message is a human-readable message indicating details
+                  about current operator phase or error.
+                type: string
+              phase:
+                description: Phase is the current phase of the operator.
+                type: string
+              ready:
+                description: Ready will be true if the client is in a ready state
+                  and available for use.
+                type: boolean
+            required:
+            - message
+            - phase
+            - ready
             type: object
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}
 status:
   acceptedNames:
     kind: ""

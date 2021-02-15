@@ -29,6 +29,14 @@ const (
 	DexDefaultVersion = "2.26.0"
 )
 
+type StatusPhase string
+
+var (
+	PhaseFailing      StatusPhase = "failing"
+	PhaseInitialising StatusPhase = "initialising"
+	PhaseActive       StatusPhase = "active"
+)
+
 type Connector struct {
 	Type   string `json:"type"`
 	Name   string `json:"name"`
@@ -63,47 +71,22 @@ type DexSpec struct {
 
 // DexStatus defines the observed state of Dex
 type DexStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// The generation observed by the Dex controller.
-	// +optional
-	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-
-	// Represents the latest available observations of a deployment's current state.
-	// +patchMergeKey=type
-	// +patchStrategy=merge
-	Conditions []DexCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,6,rep,name=conditions"`
+	// Current phase of the operator.
+	Phase StatusPhase `json:"phase"`
+	// Human-readable message indicating details about current operator phase or error.
+	Message string `json:"message"`
+	// True if the instance is in a ready state and available for use.
+	Ready bool `json:"ready"`
 }
 
 type DexConditionType string
 
-// These are valid conditions of a deployment.
-const (
-	DexReady       DexConditionType = "Ready"
-	DexProgressing DexConditionType = "Progressing"
-	DexFailure     DexConditionType = "Failure"
-)
-
-// DeploymentCondition describes the state of a deployment at a certain point.
-type DexCondition struct {
-	// Type of deployment condition.
-	Type DexConditionType `json:"type"`
-	// Status of the condition, one of True, False, Unknown.
-	Status v1.ConditionStatus `json:"status"`
-	// The last time this condition was updated.
-	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
-	// Last time the condition transitioned from one status to another.
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
-	// The reason for the condition's last transition.
-	Reason string `json:"reason,omitempty"`
-	// A human readable message indicating details about the transition.
-	Message string `json:"message,omitempty"`
-}
-
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=dexes
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Host",type=string,JSONPath=`.spec.publicHost`
+// +kubebuilder:printcolumn:name="Ready",type=boolean,JSONPath=`.status.ready`
+// +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
 
 // Dex is the Schema for the dexes API
 type Dex struct {

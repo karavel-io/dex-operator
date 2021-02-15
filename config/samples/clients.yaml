@@ -23,7 +23,6 @@ spec:
   name: Example
   redirectUris:
     - https://example.com/oauth/callback
-    - https://example.com/oauth/callback2
   instanceSelector:
     matchLabels:
       dex.karavel.io/instance: github
