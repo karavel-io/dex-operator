@@ -12,6 +12,14 @@ spec:
       config: |
         hello: world
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-dex-secrets
+  namespace: default
+stringData:
+  GITHUB_CLIENT_ID: hello
+---
 apiVersion: dex.karavel.io/v1alpha1
 kind: Dex
 metadata:
@@ -20,6 +28,9 @@ metadata:
 spec:
   publicHost: dex.example.com
   replicas: 1
+  envFrom:
+    - secretRef:
+        name: github-dex-secrets
   connectors:
     - type: github
       id: github

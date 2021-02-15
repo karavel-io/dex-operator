@@ -51,6 +51,10 @@ type DexSpec struct {
 	// Replicas is the number of pods to deploy
 	// +kubebuilder:default:=1
 	Replicas int32 `json:"replicas,omitempty"`
+
+	// EnvFrom is a reference to an environment variables source for the Dex pods
+	// +optional
+	EnvFrom []v1.EnvFromSource `json:"envFrom,omitempty"`
 }
 
 // DexStatus defines the observed state of Dex
