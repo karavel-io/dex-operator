@@ -164,6 +164,9 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	if op == dex.OpCreated {
 		r.Recorder.PastEventf(&dc, start, v1.EventTypeNormal, "Creating", "Creating on Dex instance %s", k)
 		r.Recorder.Eventf(&dc, v1.EventTypeNormal, "Created", "Created on Dex instance %s", k)
+	} else if op == dex.OpUpdated {
+		r.Recorder.PastEventf(&dc, start, v1.EventTypeNormal, "Updating", "Updating on Dex instance %s", k)
+		r.Recorder.Eventf(&dc, v1.EventTypeNormal, "Updated", "Updated on Dex instance %s", k)
 	}
 
 	return r.ManageSuccess(ctx, &dc)
