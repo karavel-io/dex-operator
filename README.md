@@ -138,6 +138,19 @@ spec:
     namespace: dex
 ```
 
+The generated `Secret` will look like this:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dex-example-credentials
+  namespace: default
+type: Opaque
+data:
+  clientId: ZGVmYXVsdC1leGFtcGxl
+  clientSecret: d2hhdCBhcmUgeW91IGxvb2tpbmcgZm9yIGV4YWN0bHk/IDsp
+```
 ## Local build
 
 A local environment to test it is provided using [Kind].
