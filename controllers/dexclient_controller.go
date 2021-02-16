@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"github.com/go-logr/logr"
 	dexv1alpha1 "github.com/mikamai/dex-operator/api/v1alpha1"
 	"github.com/mikamai/dex-operator/dex"
@@ -85,6 +84,8 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return r.ManageError(ctx, &dc, err)
 	}
 
+	log = log.WithValues("dex", k)
+
 	finalizer := "clients.finalizers.dex.karavel.io"
 	if dc.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !utils.ContainsString(dc.ObjectMeta.Finalizers, finalizer) {
@@ -121,8 +122,7 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return r.ManageSuccess(ctx, &dc)
 	}
 
-	var secret string
-	sec, s, err := dex.Secret(&dc)
+	sec, secret, err := dex.Secret(&dc)
 	if err != nil {
 		return r.ManageError(ctx, &dc, err)
 	}
@@ -135,41 +135,35 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		Name:      sec.Name,
 		Namespace: sec.Namespace,
 	}
-	if dc.Spec.Public {
-		if err := r.Client.Delete(ctx, seco); err != nil && !kuberrors.IsNotFound(err) {
-			return r.ManageError(ctx, &dc, err)
-		}
-	} else {
-		err = r.Client.Get(ctx, sk, seco)
-		if err != nil && !kuberrors.IsNotFound(err) {
+	err = r.Client.Get(ctx, sk, seco)
+	if err != nil && !kuberrors.IsNotFound(err) {
+		return r.ManageError(ctx, &dc, err)
+	}
+
+	recreate := false
+	if kuberrors.IsNotFound(err) {
+		log.Info("Secret is missing, creating", "secret", seco.Name)
+		seco.StringData = sec.StringData
+		if err := controllerutil.SetControllerReference(&dc, seco, r.Scheme); err != nil {
 			return r.ManageError(ctx, &dc, err)
 		}
 
-		if kuberrors.IsNotFound(err) {
-			log.Info("Secret is missing, creating", "secret", seco.Name)
-			seco.StringData = sec.StringData
-			if err := controllerutil.SetControllerReference(&dc, seco, r.Scheme); err != nil {
-				return r.ManageError(ctx, &dc, err)
-			}
-
-			if err := r.Client.Create(ctx, seco); err != nil {
-				return r.ManageError(ctx, &dc, err)
-			}
+		if err := r.Client.Create(ctx, seco); err != nil {
+			return r.ManageError(ctx, &dc, err)
 		}
-		secret = s
+
+		recreate = true
 	}
 
 	start := metav1.Now()
-	instance := fmt.Sprintf("%s/%s", svc.Namespace, svc.Name)
-	l := log.WithValues("dex", instance)
 
-	op, err := dex.AssertDexClient(ctx, l, &svc, &dc, secret)
+	op, err := dex.AssertDexClient(ctx, log, &svc, &dc, secret, recreate)
 	if err != nil {
 		return r.ManageError(ctx, &dc, err)
 	}
 	if op == dex.OpCreated {
-		r.Recorder.PastEventf(&dc, start, "Normal", "Creating", "Creating on Dex instance %s", instance)
-		r.Recorder.Eventf(&dc, "Normal", "Created", "Created on Dex instance %s", instance)
+		r.Recorder.PastEventf(&dc, start, "Normal", "Creating", "Creating on Dex instance %s", k)
+		r.Recorder.Eventf(&dc, "Normal", "Created", "Created on Dex instance %s", k)
 	}
 
 	return r.ManageSuccess(ctx, &dc)

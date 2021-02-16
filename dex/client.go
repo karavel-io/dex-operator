@@ -24,24 +24,36 @@ const (
 )
 
 func Secret(dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
-	secret, err := utils.GenerateRandomString(15)
-	if err != nil {
-		return v1.Secret{}, "", err
+	data := map[string]string{
+		"clientId": dc.ClientID(),
 	}
 
+	var secret string
+	if !dc.Spec.Public {
+		s, err := utils.GenerateRandomString(15)
+		if err != nil {
+			return v1.Secret{}, "", err
+		}
+		data["clientSecret"] = s
+		secret = s
+	}
 	return v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("dex-%s-credentials", dc.Name),
 			Namespace: dc.Namespace,
 		},
-		StringData: map[string]string{
-			"clientId":     dc.ClientID(),
-			"clientSecret": secret,
-		},
+		StringData: data,
 	}, secret, nil
 }
 
-func AssertDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, client *dexv1alpha1.DexClient, secret string) (Op, error) {
+func AssertDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, client *dexv1alpha1.DexClient, secret string, recreate bool) (Op, error) {
+	if recreate {
+		_, err := DeleteDexClient(ctx, log, svc, client)
+		if err != nil {
+			return OpNone, err
+		}
+	}
+
 	a, err := buildDexApi(log, svc, "")
 	if err != nil {
 		return OpNone, err

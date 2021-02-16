@@ -20,6 +20,9 @@ spec:
     - jsonPath: .status.clientID
       name: Client ID
       type: string
+    - jsonPath: .spec.public
+      name: Public
+      type: boolean
     - jsonPath: .status.ready
       name: Ready
       type: boolean

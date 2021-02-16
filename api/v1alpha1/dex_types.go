@@ -20,14 +20,9 @@ import (
 	"fmt"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"strings"
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
-
-const (
-	DexDefaultVersion = "2.26.0"
-)
 
 type StatusPhase string
 
@@ -49,10 +44,6 @@ type DexSpec struct {
 	// PublicHost is the publicly reachable Host for the Dex instance
 	PublicHost string `json:"publicHost"`
 
-	// Version is the desired Dex version. Defaults to the latest stable version
-	// +optional
-	Version string `json:"version,omitempty"`
-
 	// Connectors is the list of base connectors
 	// +kubebuilder:validation:MinItems=1
 	Connectors []Connector `json:"connectors"`
@@ -68,6 +59,11 @@ type DexSpec struct {
 	// Labels is a set of labels that will be applied to the instance resources
 	// +optional
 	InstanceLabels map[string]string `json:"instanceLabels,omitempty"`
+
+	// Image is the container image to use. Defaults
+	// to the official Dex image and latest tag
+	// +optional
+	Image string `json:"image,omitempty"`
 }
 
 // DexStatus defines the observed state of Dex
@@ -91,7 +87,7 @@ type DexConditionType string
 // +kubebuilder:subresource:status
 // +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.selector
 // +kubebuilder:printcolumn:name="Host",type=string,JSONPath=`.spec.publicHost`
-// +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.replicas`
+// +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.status.replicas`
 // +kubebuilder:printcolumn:name="Ready",type=boolean,JSONPath=`.status.ready`
 // +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
@@ -125,14 +121,6 @@ func (in *Dex) BuildOwnerReference() metav1.OwnerReference {
 		Name:       in.Name,
 		UID:        in.UID,
 	}
-}
-
-func (in *Dex) Version() string {
-	if in.Spec.Version == "" {
-		in.Spec.Version = DexDefaultVersion
-	}
-
-	return strings.TrimPrefix(in.Spec.Version, "v")
 }
 
 func (in *Dex) ServiceName() string {

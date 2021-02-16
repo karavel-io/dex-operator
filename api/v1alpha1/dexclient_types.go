@@ -67,6 +67,7 @@ type DexClientStatus struct {
 // +kubebuilder:resource:path=dexclients
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Client ID",type=string,JSONPath=`.status.clientID`
+// +kubebuilder:printcolumn:name="Public",type=boolean,JSONPath=`.spec.public`
 // +kubebuilder:printcolumn:name="Ready",type=boolean,JSONPath=`.status.ready`
 // +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`

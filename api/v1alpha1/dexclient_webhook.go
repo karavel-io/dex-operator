@@ -49,16 +49,20 @@ func (in *DexClient) ValidateCreate() error {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (in *DexClient) ValidateUpdate(old runtime.Object) error {
 	dexclientlog.Info("validate update", "name", in.Name)
+	gr := schema.GroupResource{
+		Group:    "dex.karavel.io",
+		Resource: "dexclients",
+	}
 
 	dco := old.(*DexClient)
 	diff := in.Spec.InstanceRef.Name != dco.Spec.InstanceRef.Name
 	diff = diff || in.Spec.InstanceRef.Namespace != dco.Spec.InstanceRef.Namespace
 	if diff {
-		gr := schema.GroupResource{
-			Group:    "dex.karavel.io",
-			Resource: "dexclients",
-		}
 		return apierrors.NewConflict(gr, in.Name, errors.New("field spec.instanceSelector is immutable"))
+	}
+
+	if in.Spec.Public != dco.Spec.Public {
+		return apierrors.NewConflict(gr, in.Name, errors.New("field spec.public is immutable"))
 	}
 
 	return nil

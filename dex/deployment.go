@@ -97,7 +97,7 @@ func Deployment(dex *dexv1alpha1.Dex, cm *v1.ConfigMap, sa *v1.ServiceAccount) a
 					Containers: []v1.Container{
 						{
 							Name:    "dex",
-							Image:   fmt.Sprintf("quay.io/dexidp/dex:v%s", dex.Version()),
+							Image:   dex.Spec.Image,
 							Command: []string{"dex"},
 							Args:    []string{"serve", "/etc/dex/cfg/config.yaml"},
 							EnvFrom: dex.Spec.EnvFrom,

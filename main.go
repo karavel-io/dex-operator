@@ -102,6 +102,10 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "DexClient")
 		os.Exit(1)
 	}
+	if err = (&dexv1alpha1.Dex{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "Dex")
+		os.Exit(1)
+	}
 	// +kubebuilder:scaffold:builder
 
 	setupLog.Info("starting manager")
