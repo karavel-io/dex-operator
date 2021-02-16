@@ -142,10 +142,12 @@ type DexConditionType string
 // +kubebuilder:resource:path=dexes
 // +kubebuilder:subresource:status
 // +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.selector
+// +kubebuilder:printcolumn:name="Instances",type=number,JSONPath=`.spec.replicas`
+// +kubebuilder:printcolumn:name="Running",type=number,JSONPath=`.status.replicas`
 // +kubebuilder:printcolumn:name="URL",type=string,JSONPath=`.spec.publicURL`
-// +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.status.replicas`
 // +kubebuilder:printcolumn:name="Ready",type=boolean,JSONPath=`.status.ready`
-// +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
+// +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`,priority=1
+// +kubebuilder:printcolumn:name="Image",type=string,JSONPath=`.spec.image`,priority=1
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Dex is the Schema for the dexes API

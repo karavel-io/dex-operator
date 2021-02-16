@@ -17,17 +17,25 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - jsonPath: .spec.replicas
+      name: Instances
+      type: number
+    - jsonPath: .status.replicas
+      name: Running
+      type: number
     - jsonPath: .spec.publicURL
       name: URL
-      type: string
-    - jsonPath: .status.replicas
-      name: Replicas
       type: string
     - jsonPath: .status.ready
       name: Ready
       type: boolean
     - jsonPath: .status.message
       name: Message
+      priority: 1
+      type: string
+    - jsonPath: .spec.image
+      name: Image
+      priority: 1
       type: string
     - jsonPath: .metadata.creationTimestamp
       name: Age

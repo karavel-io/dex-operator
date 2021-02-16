@@ -31,6 +31,24 @@ spec:
       name: Example
 ```
 
+### Custom Image
+
+By default, the operator will deploy the latest official Dex container image available at `quay.io/dexidp/dex:latest`.
+If you wish to pin a specific image tag, or wish to use a different Dex image, you can override it by setting the `image` field.
+
+**WARNING** Using an image other than `quay.io/dexidp/dex` is unsupported.
+
+```yaml
+apiVersion: dex.karavel.io/v1alpha1
+kind: Dex
+metadata:
+  name: dex
+  namespace: dex
+spec:
+  # rest of the configuration omitted
+  image: quay.io/dexidp/dex:v2.26.0
+```
+
 ### Environment Variables
 
 Dex supports [reading connectors config values from environment variables](https://github.com/dexidp/dex/blob/master/examples/config-dev.yaml#L123).
