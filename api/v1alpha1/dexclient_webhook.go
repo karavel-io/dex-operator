@@ -50,7 +50,7 @@ func (in *DexClient) ValidateCreate() error {
 func (in *DexClient) ValidateUpdate(old runtime.Object) error {
 	dexclientlog.Info("validate update", "name", in.Name)
 	gr := schema.GroupResource{
-		Group:    "dex.karavel.io",
+		Group:    in.GroupVersionKind().Group,
 		Resource: "dexclients",
 	}
 

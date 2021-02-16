@@ -41,14 +41,15 @@ type Connector struct {
 
 // DexSpec defines the desired state of Dex
 type DexSpec struct {
-	// PublicHost is the publicly reachable Host for the Dex instance
-	PublicHost string `json:"publicHost"`
+	// PublicURL is the publicly reachable URL for the Dex instance, including the path component.
+	// Example: https://auth.example.com/dex
+	PublicURL string `json:"publicURL"`
 
 	// Connectors is the list of base connectors
 	// +kubebuilder:validation:MinItems=1
 	Connectors []Connector `json:"connectors"`
 
-	// Replicas is the number of pods to deploy
+	// Replicas is the number of Pods to deploy
 	// +kubebuilder:default:=1
 	Replicas int32 `json:"replicas,omitempty"`
 
@@ -64,6 +65,95 @@ type DexSpec struct {
 	// to the official Dex image and latest tag
 	// +optional
 	Image string `json:"image,omitempty"`
+
+	// ImagePullSecrets is an optional list of references to secrets in the same namespace
+	// to use for pulling Dex images from registries
+	// see http://kubernetes.io/docs/user-guide/images#specifying-imagepullsecrets-on-a-pod
+	// +optional
+	ImagePullSecrets []v1.LocalObjectReference `json:"imagePullSecrets,omitempty"`
+
+	// ServiceAccountName is the name of the ServiceAccount to use to run the
+	// Dex Pods.
+	// +optional
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
+	// Resources defines resources requests and limits for single Pods.
+	// +optional
+	Resources v1.ResourceRequirements `json:"resources,omitempty"`
+
+	// NodeSelector defines which Nodes the Pods are scheduled on.
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// Affinity defines the pod's scheduling constraints.
+	// +optional
+	Affinity *v1.Affinity `json:"affinity,omitempty"`
+
+	// Tolerations define the pod's tolerations.
+	// +optional
+	Tolerations []v1.Toleration `json:"tolerations,omitempty"`
+
+	// TopologySpreadConstraints define the pod's topology spread constraints.
+	// +optional
+	TopologySpreadConstraints []v1.TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
+
+	// SecurityContext holds pod-level security attributes and common container settings.
+	// This defaults to the default PodSecurityContext.
+	// +optional
+	SecurityContext *v1.PodSecurityContext `json:"securityContext,omitempty"`
+
+	// Service allows to override how the main service is created
+	// +optional
+	Service ServiceOverride `json:"service,omitempty"`
+
+	// Service allows to override how the metrics service is created
+	// +optional
+	MetricsService ServiceOverride `json:"metricsService,omitempty"`
+
+	// Ingress allows to configure the Ingress object to route traffic into Dex
+	Ingress Ingress `json:"ingress,omitempty"`
+}
+
+type ServiceOverride struct {
+	// Type determines how the Service is exposed. Defaults to ClusterIP. Valid
+	// options are ExternalName, ClusterIP, NodePort, and LoadBalancer.
+	// "ExternalName" maps to the specified externalName.
+	// "ClusterIP" allocates a cluster-internal IP address for load-balancing to
+	// endpoints. Endpoints are determined by the selector or if that is not
+	// specified, by manual construction of an Endpoints object. If clusterIP is
+	// "None", no virtual IP is allocated and the endpoints are published as a
+	// set of endpoints rather than a stable IP.
+	// "NodePort" builds on ClusterIP and allocates a port on every node which
+	// routes to the clusterIP.
+	// "LoadBalancer" builds on NodePort and creates an
+	// external load-balancer (if supported in the current cloud) which routes
+	// to the clusterIP.
+	// More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+	// +kubebuilder:default:=ClusterIP
+	Type v1.ServiceType `json:"type,omitempty"`
+
+	// LoadBalancerIP requests the specified IP.
+	// Only applies to Service Type: LoadBalancer
+	// LoadBalancer will get created with the IP specified in this field.
+	// This feature depends on whether the underlying cloud-provider supports specifying
+	// the loadBalancerIP when a load balancer is created.
+	// This field will be ignored if the cloud-provider does not support the feature.
+	// +optional
+	LoadBalancerIP string `json:"loadBalancerIP,omitempty" protobuf:"bytes,8,opt,name=loadBalancerIP"`
+}
+
+type Ingress struct {
+	Annotations map[string]string `json:"annotations,omitempty"`
+	Labels      map[string]string `json:"labels,omitempty"`
+	// Enabled allows to turn off the Ingress object (for example for using a LoadBalancer service)
+	// +kubebuilder:default:=true
+	Enabled *bool `json:"enabled,omitempty"`
+	// Path is the path under which Dex is to be served.
+	// +kubebuilder:default:=/
+	Path       string `json:"path,omitempty"`
+	TLSEnabled bool   `json:"tlsEnabled,omitempty"`
+	// +optional
+	TLSSecretName string `json:"tlsSecretName,omitempty"`
 }
 
 // DexStatus defines the observed state of Dex
@@ -86,7 +176,7 @@ type DexConditionType string
 // +kubebuilder:resource:path=dexes
 // +kubebuilder:subresource:status
 // +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.selector
-// +kubebuilder:printcolumn:name="Host",type=string,JSONPath=`.spec.publicHost`
+// +kubebuilder:printcolumn:name="URL",type=string,JSONPath=`.spec.publicURL`
 // +kubebuilder:printcolumn:name="Replicas",type=string,JSONPath=`.status.replicas`
 // +kubebuilder:printcolumn:name="Ready",type=boolean,JSONPath=`.status.ready`
 // +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`

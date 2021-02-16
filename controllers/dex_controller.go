@@ -23,7 +23,9 @@ import (
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
@@ -51,6 +53,7 @@ type DexReconciler struct {
 // +kubebuilder:rbac:groups=dex.karavel.io,resources=dexes/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups="",resources=events;configmaps;serviceaccounts;services,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=dex.coreos.com,resources=*,verbs=*
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=create
@@ -167,6 +170,7 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	svco.Name = svc.Name
 	svco.Namespace = svc.Namespace
 	_, err = ctrl.CreateOrUpdate(ctx, r.Client, svco, func() error {
+		log.Info("Reconciling Service", "name", svco.Name, "namespace", svco.Namespace, "version", svco.ResourceVersion)
 		svco.Labels = svc.Labels
 		if svco.CreationTimestamp.IsZero() {
 			svco.Spec.Selector = svc.Spec.Selector
@@ -184,6 +188,7 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	msvco.Name = msvc.Name
 	msvco.Namespace = msvc.Namespace
 	_, err = ctrl.CreateOrUpdate(ctx, r.Client, msvco, func() error {
+		log.Info("Reconciling Metrics Service", "name", msvco.Name, "namespace", msvco.Namespace, "version", msvco.ResourceVersion)
 		msvco.Labels = msvc.Labels
 		if msvco.CreationTimestamp.IsZero() {
 			msvco.Spec.Selector = msvc.Spec.Selector
@@ -196,9 +201,34 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return r.ManageError(ctx, &d, errors.Wrap(err, "failed to reconcile metrics Service"))
 	}
 
+	ing, err := dex.Ingress(&d)
+	if err != nil {
+		return r.ManageError(ctx, &d, err)
+	}
+	ingo := new(networkingv1beta1.Ingress)
+	ingo.Name = ing.Name
+	ingo.Namespace = ing.Namespace
+	if *d.Spec.Ingress.Enabled {
+		_, err = ctrl.CreateOrUpdate(ctx, r.Client, ingo, func() error {
+			log.Info("Reconciling Ingress", "name", ingo.Name, "namespace", ingo.Namespace, "version", ingo.ResourceVersion)
+			ingo.Labels = ing.Labels
+			ingo.Annotations = ing.Annotations
+			ingo.Spec = ing.Spec
+			return controllerutil.SetControllerReference(&d, ingo, r.Scheme)
+		})
+		if err != nil {
+			return r.ManageError(ctx, &d, errors.Wrap(err, "failed to reconcile Ingress"))
+		}
+	} else {
+		log.Info("Removing Ingress", "name", ingo.Name, "namespace", ingo.Namespace, "version", ingo.ResourceVersion)
+		if err := r.Client.Delete(ctx, ingo); err != nil && !kuberrors.IsNotFound(err) {
+			return r.ManageError(ctx, &d, err)
+		}
+	}
+
 	if first {
-		r.Recorder.PastEventf(&d, start, "Normal", "Creating", "Creating resources")
-		r.Recorder.Event(&d, "Normal", "Created", "Creating resources")
+		r.Recorder.PastEventf(&d, start, v1.EventTypeNormal, "Creating", "Creating resources")
+		r.Recorder.Event(&d, v1.EventTypeNormal, "Created", "Creating resources")
 	}
 	return r.ManageSuccess(ctx, &d)
 }
@@ -211,6 +241,7 @@ func (r *DexReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&rbacv1.ClusterRoleBinding{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&v1.Service{}).
+		Owns(&networkingv1beta1.Ingress{}).
 		Complete(r)
 }
 
@@ -233,7 +264,7 @@ func (r *DexReconciler) ManageError(ctx context.Context, dex *dexv1alpha1.Dex, i
 	dex.Status.Ready = false
 	dex.Status.Phase = dexv1alpha1.PhaseFailing
 
-	r.Recorder.Event(dex, "Warning", "Error", issue.Error())
+	r.Recorder.Event(dex, v1.EventTypeWarning, "Error", issue.Error())
 
 	return ctrl.Result{
 		RequeueAfter: requeueAfterError,

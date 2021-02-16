@@ -25,8 +25,9 @@ func Service(dex *dexv1alpha1.Dex) v1.Service {
 			Labels:    labels,
 		},
 		Spec: v1.ServiceSpec{
-			Selector: labels,
-			Type:     v1.ServiceTypeClusterIP,
+			Selector:       labels,
+			Type:           dex.Spec.Service.Type,
+			LoadBalancerIP: dex.Spec.Service.LoadBalancerIP,
 			Ports: []v1.ServicePort{
 				{
 					Name:       "https",
@@ -55,8 +56,9 @@ func MetricsService(dex *dexv1alpha1.Dex) v1.Service {
 			Labels:    labels,
 		},
 		Spec: v1.ServiceSpec{
-			Selector: labels,
-			Type:     v1.ServiceTypeClusterIP,
+			Selector:       labels,
+			Type:           dex.Spec.MetricsService.Type,
+			LoadBalancerIP: dex.Spec.MetricsService.LoadBalancerIP,
 			Ports: []v1.ServicePort{
 				{
 					Name:       "metrics",
@@ -93,6 +95,7 @@ func Deployment(dex *dexv1alpha1.Dex, cm *v1.ConfigMap, sa *v1.ServiceAccount) a
 					},
 				},
 				Spec: v1.PodSpec{
+					ImagePullSecrets:   dex.Spec.ImagePullSecrets,
 					ServiceAccountName: sa.Name,
 					Containers: []v1.Container{
 						{
@@ -136,8 +139,14 @@ func Deployment(dex *dexv1alpha1.Dex, cm *v1.ConfigMap, sa *v1.ServiceAccount) a
 									ReadOnly:  true,
 								},
 							},
+							Resources: dex.Spec.Resources,
 						},
 					},
+					Affinity:                  dex.Spec.Affinity,
+					NodeSelector:              dex.Spec.NodeSelector,
+					Tolerations:               dex.Spec.Tolerations,
+					TopologySpreadConstraints: dex.Spec.TopologySpreadConstraints,
+					SecurityContext:           dex.Spec.SecurityContext,
 					Volumes: []v1.Volume{
 						{
 							Name: "config",

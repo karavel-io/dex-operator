@@ -10,7 +10,7 @@ import (
 func ServiceAccount(dex *dexv1alpha1.Dex) v1.ServiceAccount {
 	return v1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      dex.Name,
+			Name:      dex.Spec.ServiceAccountName,
 			Namespace: dex.Namespace,
 			Labels:    dex.Spec.InstanceLabels,
 		},

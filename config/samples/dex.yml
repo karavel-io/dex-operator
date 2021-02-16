@@ -4,8 +4,12 @@ metadata:
   name: github
   namespace: default
 spec:
-  publicHost: dex.example.com
+  publicURL: https://dex.example.com
   replicas: 1
+  ingress:
+    annotations:
+      cert-manager.io/issuer: selfsigned-issuer
+    tlsEnabled: true
   envFrom:
     - secretRef:
         name: github-dex-secrets

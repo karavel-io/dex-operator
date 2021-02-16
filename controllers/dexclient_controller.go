@@ -106,7 +106,7 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 					return r.ManageError(ctx, &dc, err)
 				}
 				if op == dex.OpDeleted {
-					r.Recorder.Eventf(&dc, "Normal", "Deleted", "deleted client from Dex instance")
+					r.Recorder.Eventf(&dc, v1.EventTypeNormal, "Deleted", "deleted client from Dex instance")
 				}
 			}
 
@@ -162,8 +162,8 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return r.ManageError(ctx, &dc, err)
 	}
 	if op == dex.OpCreated {
-		r.Recorder.PastEventf(&dc, start, "Normal", "Creating", "Creating on Dex instance %s", k)
-		r.Recorder.Eventf(&dc, "Normal", "Created", "Created on Dex instance %s", k)
+		r.Recorder.PastEventf(&dc, start, v1.EventTypeNormal, "Creating", "Creating on Dex instance %s", k)
+		r.Recorder.Eventf(&dc, v1.EventTypeNormal, "Created", "Created on Dex instance %s", k)
 	}
 
 	return r.ManageSuccess(ctx, &dc)
@@ -197,7 +197,7 @@ func (r *DexClientReconciler) ManageError(ctx context.Context, client *dexv1alph
 	client.Status.Ready = false
 	client.Status.Phase = dexv1alpha1.PhaseFailing
 	client.Status.ClientID = ""
-	r.Recorder.Event(client, "Warning", "Error", issue.Error())
+	r.Recorder.Event(client, v1.EventTypeWarning, "Error", issue.Error())
 
 	return ctrl.Result{
 		RequeueAfter: requeueAfterError,

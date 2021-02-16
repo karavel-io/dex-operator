@@ -23,7 +23,7 @@ webhooks:
     - CREATE
     - UPDATE
     resources:
-    - dices
+    - dexes
 
 ---
 apiVersion: admissionregistration.k8s.io/v1beta1
@@ -32,6 +32,24 @@ metadata:
   creationTimestamp: null
   name: validating-webhook-configuration
 webhooks:
+- clientConfig:
+    caBundle: Cg==
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-dex-karavel-io-v1alpha1-dex
+  failurePolicy: Fail
+  name: vdex.kb.io
+  rules:
+  - apiGroups:
+    - dex.karavel.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - dexes
 - clientConfig:
     caBundle: Cg==
     service:

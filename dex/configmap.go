@@ -12,7 +12,7 @@ import (
 )
 
 var configTpl = `
-issuer: https://{{ .PublicHost }}
+issuer: {{ .PublicURL }}
 storage:
   type: kubernetes
   config:
