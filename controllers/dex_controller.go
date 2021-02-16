@@ -154,6 +154,13 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	if err != nil {
 		return r.ManageError(ctx, &d, errors.Wrap(err, "failed to reconcile Deployment"))
 	}
+	sel, err := metav1.LabelSelectorAsSelector(depo.Spec.Selector)
+	if err != nil {
+		return r.ManageError(ctx, &d, err)
+	}
+
+	d.Status.Selector = sel.String()
+	d.Status.Replicas = *depo.Spec.Replicas
 
 	svc := dex.Service(&d)
 	svco := new(v1.Service)

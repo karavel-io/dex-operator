@@ -78,6 +78,10 @@ type DexStatus struct {
 	Message string `json:"message"`
 	// True if the instance is in a ready state and available for use.
 	Ready bool `json:"ready"`
+	// Replicas is the current number of replicas
+	Replicas int32 `json:"replicas"`
+	// Selector is the label selector for the instance pods
+	Selector string `json:"selector"`
 }
 
 type DexConditionType string
@@ -85,9 +89,12 @@ type DexConditionType string
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:path=dexes
 // +kubebuilder:subresource:status
+// +kubebuilder:subresource:scale:specpath=.spec.replicas,statuspath=.status.replicas,selectorpath=.status.selector
 // +kubebuilder:printcolumn:name="Host",type=string,JSONPath=`.spec.publicHost`
+// +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.replicas`
 // +kubebuilder:printcolumn:name="Ready",type=boolean,JSONPath=`.status.ready`
 // +kubebuilder:printcolumn:name="Message",type=string,JSONPath=`.status.message`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
 // Dex is the Schema for the dexes API
 type Dex struct {
