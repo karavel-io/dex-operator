@@ -1,0 +1,20 @@
+apiVersion: dex.karavel.io/v1alpha1
+kind: Dex
+metadata:
+  name: multiple
+spec:
+  publicURL: https://dex.example.com/multiple
+  replicas: 1
+  ingress:
+    annotations:
+      cert-manager.io/issuer: selfsigned-issuer
+    tlsEnabled: true
+  connectors:
+    - type: mockCallback
+      id: mock-1
+      name: Example 1
+    - type: mockCallback
+      id: mock-2
+      name: Example 2
+      config: |
+        hello: world

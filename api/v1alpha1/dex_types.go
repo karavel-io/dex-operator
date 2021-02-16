@@ -102,56 +102,22 @@ type DexSpec struct {
 	// +optional
 	SecurityContext *v1.PodSecurityContext `json:"securityContext,omitempty"`
 
-	// Service allows to override how the main service is created
-	// +optional
-	Service ServiceOverride `json:"service,omitempty"`
-
-	// Service allows to override how the metrics service is created
-	// +optional
-	MetricsService ServiceOverride `json:"metricsService,omitempty"`
-
 	// Ingress allows to configure the Ingress object to route traffic into Dex
 	Ingress Ingress `json:"ingress,omitempty"`
 }
 
-type ServiceOverride struct {
-	// Type determines how the Service is exposed. Defaults to ClusterIP. Valid
-	// options are ExternalName, ClusterIP, NodePort, and LoadBalancer.
-	// "ExternalName" maps to the specified externalName.
-	// "ClusterIP" allocates a cluster-internal IP address for load-balancing to
-	// endpoints. Endpoints are determined by the selector or if that is not
-	// specified, by manual construction of an Endpoints object. If clusterIP is
-	// "None", no virtual IP is allocated and the endpoints are published as a
-	// set of endpoints rather than a stable IP.
-	// "NodePort" builds on ClusterIP and allocates a port on every node which
-	// routes to the clusterIP.
-	// "LoadBalancer" builds on NodePort and creates an
-	// external load-balancer (if supported in the current cloud) which routes
-	// to the clusterIP.
-	// More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
-	// +kubebuilder:default:=ClusterIP
-	Type v1.ServiceType `json:"type,omitempty"`
-
-	// LoadBalancerIP requests the specified IP.
-	// Only applies to Service Type: LoadBalancer
-	// LoadBalancer will get created with the IP specified in this field.
-	// This feature depends on whether the underlying cloud-provider supports specifying
-	// the loadBalancerIP when a load balancer is created.
-	// This field will be ignored if the cloud-provider does not support the feature.
-	// +optional
-	LoadBalancerIP string `json:"loadBalancerIP,omitempty" protobuf:"bytes,8,opt,name=loadBalancerIP"`
-}
-
 type Ingress struct {
+	// Annotations to be added to the Ingress object
 	Annotations map[string]string `json:"annotations,omitempty"`
-	Labels      map[string]string `json:"labels,omitempty"`
+	// Labels to be added to the Ingress object
+	Labels map[string]string `json:"labels,omitempty"`
 	// Enabled allows to turn off the Ingress object (for example for using a LoadBalancer service)
 	// +kubebuilder:default:=true
 	Enabled *bool `json:"enabled,omitempty"`
-	// Path is the path under which Dex is to be served.
-	// +kubebuilder:default:=/
-	Path       string `json:"path,omitempty"`
-	TLSEnabled bool   `json:"tlsEnabled,omitempty"`
+	// TLSEnabled toggles the TLS configuration on the Ingress object
+	// +optional
+	TLSEnabled bool `json:"tlsEnabled,omitempty"`
+	// TLSSecretName overrides the generated name for the TLS certificate Secret object
 	// +optional
 	TLSSecretName string `json:"tlsSecretName,omitempty"`
 }

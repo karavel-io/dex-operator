@@ -1,0 +1,10 @@
+apiVersion: dex.karavel.io/v1alpha1
+kind: DexClient
+metadata:
+  name: multiple-example
+spec:
+  name: Multiple Example
+  redirectUris:
+    - https://example.com/oauth/callback
+  instanceRef:
+    name: multiple

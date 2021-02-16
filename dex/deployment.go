@@ -25,9 +25,8 @@ func Service(dex *dexv1alpha1.Dex) v1.Service {
 			Labels:    labels,
 		},
 		Spec: v1.ServiceSpec{
-			Selector:       labels,
-			Type:           dex.Spec.Service.Type,
-			LoadBalancerIP: dex.Spec.Service.LoadBalancerIP,
+			Selector: labels,
+			Type:     v1.ServiceTypeClusterIP,
 			Ports: []v1.ServicePort{
 				{
 					Name:       "https",
@@ -56,9 +55,8 @@ func MetricsService(dex *dexv1alpha1.Dex) v1.Service {
 			Labels:    labels,
 		},
 		Spec: v1.ServiceSpec{
-			Selector:       labels,
-			Type:           dex.Spec.MetricsService.Type,
-			LoadBalancerIP: dex.Spec.MetricsService.LoadBalancerIP,
+			Selector: labels,
+			Type:     v1.ServiceTypeClusterIP,
 			Ports: []v1.ServicePort{
 				{
 					Name:       "metrics",

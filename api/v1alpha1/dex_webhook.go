@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
@@ -54,14 +53,6 @@ func (in *Dex) Default() {
 
 	if in.Spec.ServiceAccountName == "" {
 		in.Spec.ServiceAccountName = in.Name
-	}
-
-	if in.Spec.Service.Type != v1.ServiceTypeLoadBalancer {
-		in.Spec.Service.LoadBalancerIP = ""
-	}
-
-	if in.Spec.MetricsService.Type != v1.ServiceTypeLoadBalancer {
-		in.Spec.MetricsService.LoadBalancerIP = ""
 	}
 }
 

@@ -2,9 +2,8 @@ apiVersion: dex.karavel.io/v1alpha1
 kind: Dex
 metadata:
   name: github
-  namespace: default
 spec:
-  publicURL: https://dex.example.com
+  publicURL: https://dex.example.com/github
   replicas: 1
   ingress:
     annotations:
@@ -14,11 +13,6 @@ spec:
     - secretRef:
         name: github-dex-secrets
   connectors:
-    - type: mockCallback
-      id: mock
-      name: Example
-      config: |
-        hello: world
     - type: github
       id: github
       name: GitHub
@@ -26,7 +20,7 @@ spec:
         # Credentials can be string literals or pulled from the environment.
         clientID: $GITHUB_CLIENT_ID
         clientSecret: $GITHUB_CLIENT_SECRET
-        redirectURI: https://dex.example.com/callback
+        redirectURI: https://dex.example.com/github/callback
 ---
 apiVersion: v1
 kind: Secret

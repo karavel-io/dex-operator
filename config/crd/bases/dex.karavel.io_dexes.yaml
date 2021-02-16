@@ -721,6 +721,7 @@ spec:
                   annotations:
                     additionalProperties:
                       type: string
+                    description: Annotations to be added to the Ingress object
                     type: object
                   enabled:
                     default: true
@@ -730,14 +731,15 @@ spec:
                   labels:
                     additionalProperties:
                       type: string
+                    description: Labels to be added to the Ingress object
                     type: object
-                  path:
-                    default: /
-                    description: Path is the path under which Dex is to be served.
-                    type: string
                   tlsEnabled:
+                    description: TLSEnabled toggles the TLS configuration on the Ingress
+                      object
                     type: boolean
                   tlsSecretName:
+                    description: TLSSecretName overrides the generated name for the
+                      TLS certificate Secret object
                     type: string
                 type: object
               instanceLabels:
@@ -745,35 +747,6 @@ spec:
                   type: string
                 description: Labels is a set of labels that will be applied to the
                   instance resources
-                type: object
-              metricsService:
-                description: Service allows to override how the metrics service is
-                  created
-                properties:
-                  loadBalancerIP:
-                    description: 'LoadBalancerIP requests the specified IP. Only applies
-                      to Service Type: LoadBalancer LoadBalancer will get created
-                      with the IP specified in this field. This feature depends on
-                      whether the underlying cloud-provider supports specifying the
-                      loadBalancerIP when a load balancer is created. This field will
-                      be ignored if the cloud-provider does not support the feature.'
-                    type: string
-                  type:
-                    default: ClusterIP
-                    description: 'Type determines how the Service is exposed. Defaults
-                      to ClusterIP. Valid options are ExternalName, ClusterIP, NodePort,
-                      and LoadBalancer. "ExternalName" maps to the specified externalName.
-                      "ClusterIP" allocates a cluster-internal IP address for load-balancing
-                      to endpoints. Endpoints are determined by the selector or if
-                      that is not specified, by manual construction of an Endpoints
-                      object. If clusterIP is "None", no virtual IP is allocated and
-                      the endpoints are published as a set of endpoints rather than
-                      a stable IP. "NodePort" builds on ClusterIP and allocates a
-                      port on every node which routes to the clusterIP. "LoadBalancer"
-                      builds on NodePort and creates an external load-balancer (if
-                      supported in the current cloud) which routes to the clusterIP.
-                      More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types'
-                    type: string
                 type: object
               nodeSelector:
                 additionalProperties:
@@ -936,34 +909,6 @@ spec:
                           feature flag.
                         type: string
                     type: object
-                type: object
-              service:
-                description: Service allows to override how the main service is created
-                properties:
-                  loadBalancerIP:
-                    description: 'LoadBalancerIP requests the specified IP. Only applies
-                      to Service Type: LoadBalancer LoadBalancer will get created
-                      with the IP specified in this field. This feature depends on
-                      whether the underlying cloud-provider supports specifying the
-                      loadBalancerIP when a load balancer is created. This field will
-                      be ignored if the cloud-provider does not support the feature.'
-                    type: string
-                  type:
-                    default: ClusterIP
-                    description: 'Type determines how the Service is exposed. Defaults
-                      to ClusterIP. Valid options are ExternalName, ClusterIP, NodePort,
-                      and LoadBalancer. "ExternalName" maps to the specified externalName.
-                      "ClusterIP" allocates a cluster-internal IP address for load-balancing
-                      to endpoints. Endpoints are determined by the selector or if
-                      that is not specified, by manual construction of an Endpoints
-                      object. If clusterIP is "None", no virtual IP is allocated and
-                      the endpoints are published as a set of endpoints rather than
-                      a stable IP. "NodePort" builds on ClusterIP and allocates a
-                      port on every node which routes to the clusterIP. "LoadBalancer"
-                      builds on NodePort and creates an external load-balancer (if
-                      supported in the current cloud) which routes to the clusterIP.
-                      More info: https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types'
-                    type: string
                 type: object
               serviceAccountName:
                 description: ServiceAccountName is the name of the ServiceAccount
