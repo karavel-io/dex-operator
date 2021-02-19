@@ -23,30 +23,38 @@ const (
 	OpDeleted    = "deleted"
 )
 
+func ShouldRecreateClientSecret(dc *dexv1alpha1.DexClient, obj *v1.Secret) bool {
+	idKey := dc.Spec.ClientIDKey
+	secretKey := dc.Spec.ClientSecretKey
+
+	return obj.Data[idKey] == nil || obj.Data[secretKey] == nil
+}
+
 func Secret(dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
-	data := map[string]string{
-		"clientId": dc.ClientID(),
+	idKey := dc.Spec.ClientIDKey
+	secretKey := dc.Spec.ClientSecretKey
+	secret, err := utils.GenerateRandomString(15)
+	if err != nil {
+		return v1.Secret{}, "", err
 	}
 
-	var secret string
-	if !dc.Spec.Public {
-		s, err := utils.GenerateRandomString(15)
-		if err != nil {
-			return v1.Secret{}, "", err
-		}
-		data["clientSecret"] = s
-		secret = s
-	}
 	return v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("dex-%s-credentials", dc.Name),
 			Namespace: dc.Namespace,
 		},
-		StringData: data,
+		StringData: map[string]string{
+			idKey:     dc.ClientID(),
+			secretKey: secret,
+		},
 	}, secret, nil
 }
 
 func AssertDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, client *dexv1alpha1.DexClient, secret string, recreate bool) (Op, error) {
+	if secret == "" {
+		return OpNone, errors.New("a client must have a secret")
+	}
+
 	if recreate {
 		_, err := DeleteDexClient(ctx, log, svc, client)
 		if err != nil {
@@ -64,14 +72,6 @@ func AssertDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, clie
 	uris := client.Spec.RedirectUris
 	public := client.Spec.Public
 	log.Info("Asserting DexClient", "id", id, "name", name, "redirectUris", uris, "public", public)
-
-	if public && secret != "" {
-		return OpNone, errors.New("a public client cannot have a secret")
-	}
-
-	if !public && secret == "" {
-		return OpNone, errors.New("a confidential client must have a secret")
-	}
 
 	creq := &api.CreateClientReq{
 		Client: &api.Client{

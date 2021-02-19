@@ -55,7 +55,7 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if dc.CreationTimestamp.IsZero() && dc.Status.Phase != dexv1alpha1.PhaseInitialising {
+	if dc.Status.Phase == dexv1alpha1.NoPhase {
 		dc.Status.Phase = dexv1alpha1.PhaseInitialising
 		dc.Status.Ready = false
 		if err := r.Client.Status().Update(ctx, &dc); err != nil {
@@ -140,9 +140,18 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return r.ManageError(ctx, &dc, err)
 	}
 
-	recreate := false
-	if kuberrors.IsNotFound(err) {
+	recreate := kuberrors.IsNotFound(err)
+	if dex.ShouldRecreateClientSecret(&dc, seco) {
+		if err := r.Client.Delete(ctx, seco); client.IgnoreNotFound(err) != nil {
+			return r.ManageError(ctx, &dc, err)
+		}
+
+		recreate = true
+	}
+
+	if recreate {
 		log.Info("Secret is missing, creating", "secret", seco.Name)
+		seco.Data = map[string][]byte{}
 		seco.StringData = sec.StringData
 		if err := controllerutil.SetControllerReference(&dc, seco, r.Scheme); err != nil {
 			return r.ManageError(ctx, &dc, err)
@@ -188,6 +197,7 @@ func (r *DexClientReconciler) ManageSuccess(ctx context.Context, client *dexv1al
 		client.Status.ClientID = client.ClientID()
 
 		if err := r.Client.Status().Update(ctx, client); err != nil {
+			r.Log.Error(err, "ERROR", "dexclient", client.NamespacedName())
 			return ctrl.Result{
 				RequeueAfter: requeueAfterError,
 			}, err
@@ -197,6 +207,7 @@ func (r *DexClientReconciler) ManageSuccess(ctx context.Context, client *dexv1al
 }
 
 func (r *DexClientReconciler) ManageError(ctx context.Context, client *dexv1alpha1.DexClient, issue error) (ctrl.Result, error) {
+	r.Log.Error(issue, "ERROR", "dexclient", client.NamespacedName())
 	client.Status.Message = issue.Error()
 	client.Status.Ready = false
 	client.Status.Phase = dexv1alpha1.PhaseFailing

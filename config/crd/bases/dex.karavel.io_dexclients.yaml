@@ -52,6 +52,16 @@ spec:
           spec:
             description: DexClientSpec defines the desired state of DexClient
             properties:
+              clientIDKey:
+                default: clientID
+                description: ClientIDKey allows to override the key used in the generated
+                  Secret for the clientID
+                type: string
+              clientSecretKey:
+                default: clientSecret
+                description: ClientSecretKey allows to override the key used in the
+                  generated Secret for the clientSecret
+                type: string
               instanceRef:
                 description: InstanceRef is used to select the target Dex instance
                   Cannot be updated

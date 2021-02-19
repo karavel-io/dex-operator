@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // DexClientSpec defines the desired state of DexClient
@@ -38,6 +39,16 @@ type DexClientSpec struct {
 	// InstanceRef is used to select the target Dex instance
 	// Cannot be updated
 	InstanceRef InstanceRef `json:"instanceRef"`
+
+	// ClientIDKey allows to override the key used in the generated Secret for the clientID
+	// +kubebuilder:default:=clientID
+	// +optional
+	ClientIDKey string `json:"clientIDKey"`
+
+	// ClientSecretKey allows to override the key used in the generated Secret for the clientSecret
+	// +kubebuilder:default:=clientSecret
+	// +optional
+	ClientSecretKey string `json:"clientSecretKey"`
 }
 
 type InstanceRef struct {
@@ -96,4 +107,11 @@ type DexClientList struct {
 
 func init() {
 	SchemeBuilder.Register(&DexClient{}, &DexClientList{})
+}
+
+func (in *DexClient) NamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Name:      in.Name,
+		Namespace: in.Namespace,
+	}
 }

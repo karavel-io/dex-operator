@@ -20,6 +20,7 @@ import (
 	"fmt"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
@@ -27,6 +28,7 @@ import (
 type StatusPhase string
 
 var (
+	NoPhase           StatusPhase
 	PhaseFailing      StatusPhase = "failing"
 	PhaseInitialising StatusPhase = "initialising"
 	PhaseActive       StatusPhase = "active"
@@ -178,6 +180,13 @@ func (in *Dex) BuildOwnerReference() metav1.OwnerReference {
 		Kind:       in.Kind,
 		Name:       in.Name,
 		UID:        in.UID,
+	}
+}
+
+func (in *Dex) NamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Name:      in.Name,
+		Namespace: in.Namespace,
 	}
 }
 

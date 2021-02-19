@@ -17,7 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"net/url"
@@ -30,7 +32,7 @@ import (
 var dexlog = logf.Log.WithName("dex-resource")
 
 const (
-	DexDefaultImage = "quay.io/dexidp/dex:latest"
+	DexDefaultImage = "ghcr.io/dexidp/dex:latest"
 )
 
 func (in *Dex) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -53,6 +55,20 @@ func (in *Dex) Default() {
 
 	if in.Spec.ServiceAccountName == "" {
 		in.Spec.ServiceAccountName = in.Name
+	}
+
+	if in.Spec.Resources.Limits == nil {
+		in.Spec.Resources.Limits = map[v1.ResourceName]resource.Quantity{
+			"cpu":    resource.MustParse("200m"),
+			"memory": resource.MustParse("200Mi"),
+		}
+	}
+
+	if in.Spec.Resources.Requests == nil {
+		in.Spec.Resources.Requests = map[v1.ResourceName]resource.Quantity{
+			"cpu":    resource.MustParse("100m"),
+			"memory": resource.MustParse("100Mi"),
+		}
 	}
 }
 
