@@ -169,6 +169,7 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		r.Recorder.Eventf(&dc, v1.EventTypeNormal, "Updated", "Updated on Dex instance %s", k)
 	}
 
+	log.Info("Finished reconciling DexClient resource")
 	return r.ManageSuccess(ctx, &dc)
 }
 

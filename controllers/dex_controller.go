@@ -77,7 +77,7 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 	}
 
-	start := metav1.Now()
+	//start := metav1.Now()
 	cm, err := dex.ConfigMap(&d)
 	if err != nil {
 		return ctrl.Result{RequeueAfter: requeueAfterError}, err
@@ -226,10 +226,11 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 	}
 
-	if first {
-		r.Recorder.PastEventf(&d, start, v1.EventTypeNormal, "Creating", "Creating resources")
-		r.Recorder.Event(&d, v1.EventTypeNormal, "Created", "Creating resources")
-	}
+	//if first {
+	//	r.Recorder.PastEventf(&d, start, v1.EventTypeNormal, "Creating", "Creating resources")
+	//	r.Recorder.Event(&d, v1.EventTypeNormal, "Created", "Creating resources")
+	//}
+	log.Info("Finished reconciling Dex resource")
 	return r.ManageSuccess(ctx, &d)
 }
 
