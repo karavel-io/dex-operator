@@ -656,7 +656,7 @@ spec:
                 items:
                   properties:
                     config:
-                      type: string
+                      x-kubernetes-preserve-unknown-fields: true
                     id:
                       type: string
                     name:

@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 	v1 "k8s.io/api/core/v1"
+	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
@@ -35,10 +36,11 @@ var (
 )
 
 type Connector struct {
-	Type   string `json:"type"`
-	Name   string `json:"name"`
-	ID     string `json:"id"`
-	Config string `json:"config,omitempty"`
+	Type    string     `json:"type"`
+	Name    string     `json:"name"`
+	ID      string     `json:"id"`
+	Config  extv1.JSON `json:"config,omitempty"`
+	ConfigS string     `json:"-"`
 }
 
 // DexSpec defines the desired state of Dex

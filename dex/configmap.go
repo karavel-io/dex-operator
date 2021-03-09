@@ -9,6 +9,7 @@ import (
 	"html/template"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/json"
 )
 
 var configTpl = `
@@ -36,8 +37,10 @@ connectors:
   - type: {{ .Type }}
     id: {{ .ID }}
     name: {{ .Name }}
+{{- if .Config }}
     config:
-{{ .Config | indent 6 }}
+{{ .Config | toYaml | indent 6 }}
+{{- end }}
 {{- end }}
 
 oauth2:
@@ -46,16 +49,48 @@ oauth2:
 enablePasswordDB: false
 `
 
+type Connector struct {
+	Type   string
+	ID     string
+	Name   string
+	Config interface{}
+}
+type Config struct {
+	PublicURL  string
+	Connectors []Connector
+}
+
 func ConfigMap(dex *dexv1alpha1.Dex) (v1.ConfigMap, error) {
 	f := sprig.FuncMap()
 	f["toYaml"] = utils.ToYAML
+
+	cfg := Config{
+		PublicURL:  dex.Spec.PublicURL,
+		Connectors: make([]Connector, len(dex.Spec.Connectors)),
+	}
+	for i, c := range dex.Spec.Connectors {
+		cc := Connector{
+			Type:   c.Type,
+			ID:     c.ID,
+			Name:   c.Name,
+			Config: nil,
+		}
+		if len(c.Config.Raw) > 0 {
+			err := json.Unmarshal(c.Config.Raw, &cc.Config)
+			if err != nil {
+				return v1.ConfigMap{}, err
+			}
+		}
+
+		cfg.Connectors[i] = cc
+	}
 
 	tpl, err := template.New("config").Funcs(f).Parse(configTpl)
 	if err != nil {
 		return v1.ConfigMap{}, err
 	}
 	var s bytes.Buffer
-	if err := tpl.Execute(&s, dex.Spec); err != nil {
+	if err := tpl.Execute(&s, cfg); err != nil {
 		return v1.ConfigMap{}, err
 	}
 

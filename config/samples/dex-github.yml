@@ -16,7 +16,7 @@ spec:
     - type: github
       id: github
       name: GitHub
-      config: |
+      config:
         # Credentials can be string literals or pulled from the environment.
         clientID: $GITHUB_CLIENT_ID
         clientSecret: $GITHUB_CLIENT_SECRET

@@ -16,5 +16,5 @@ spec:
     - type: mockCallback
       id: mock-2
       name: Example 2
-      config: |
+      config:
         hello: world
