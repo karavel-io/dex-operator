@@ -1,6 +1,0 @@
-apiVersion: v2
-name: dex-operator
-description: A Helm chart for the Dex Operator
-type: application
-version: 0.1.0
-appVersion: 0.1.0

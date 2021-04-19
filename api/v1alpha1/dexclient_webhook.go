@@ -1,5 +1,5 @@
 /*
-Copyright 2021 © MIKAMAI s.in.l
+Copyright 2021 © MIKAMAI s.r.l
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+
 // log is for logging in this package.
 var dexclientlog = logf.Log.WithName("dexclient-resource")
 
@@ -36,7 +38,7 @@ func (in *DexClient) SetupWebhookWithManager(mgr ctrl.Manager) error {
 }
 
 // Change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-// +kubebuilder:webhook:verbs=create;update,path=/validate-dex-karavel-io-v1alpha1-dexclient,mutating=false,failurePolicy=fail,groups=dex.karavel.io,resources=dexclients,versions=v1alpha1,name=vdexclient.kb.io
+// +kubebuilder:webhook:verbs=create;update,path=/validate-dex-karavel-io-v1alpha1-dexclient,mutating=false,failurePolicy=fail,sideEffects=None,groups=dex.karavel.io,resources=dexclients,versions=v1alpha1,name=vdexclient.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &DexClient{}
 
