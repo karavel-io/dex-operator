@@ -39,21 +39,22 @@ jobs:
       - restore_cache: # restores saved cache if no changes are detected since last run
           keys:
             - go-mod-v4-{{ checksum "go.sum" }}
-      - run: mkdir -p /tmp/test-results
       - run:
           name: Run tests
           command: |
-            PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
-            gotestsum --junitfile ${TEST_RESULTS}/gotestsum-report.xml -- $PACKAGE_NAMES
+            make tests
+            go tool cover -html=c.out -o coverage.html
+            mv coverage.html /tmp/artifacts
       - save_cache:
           key: go-mod-v4-{{ checksum "go.sum" }}
           paths:
             - "/go/pkg/mod"
       - store_artifacts: # upload test summary for display in Artifacts
-          path: cover.out
+          path: /tmp/artifacts
           destination: raw-test-output
+
       - store_test_results: # upload test results for display in Test Summary
-          path: cover.out
+          path: /tmp/artifacts
 
   vet:
     docker:
