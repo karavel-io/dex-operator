@@ -49,7 +49,6 @@ jobs:
             - "/go/pkg/mod"
       - store_artifacts: # upload test summary for display in Artifacts
           path: /tmp/artifacts
-          destination: raw-test-output
 
       - store_test_results: # upload test results for display in Test Summary
           path: /tmp/artifacts
