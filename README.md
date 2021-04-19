@@ -7,6 +7,28 @@ declaratively configure client applications.
 
 TODO
 
+### Params
+
+```bash
+Usage of /manager:
+  -health-probe-bind-address string
+    	The address the probe endpoint binds to. (default ":8081")
+  -kubeconfig string
+    	Paths to a kubeconfig. Only required if out-of-cluster.
+  -leader-elect
+    	Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.
+  -metrics-bind-address string
+    	The address the metric endpoint binds to. (default ":8080")
+  -zap-devel
+    	Development Mode defaults(encoder=consoleEncoder,logLevel=Debug,stackTraceLevel=Warn). Production Mode defaults(encoder=jsonEncoder,logLevel=Info,stackTraceLevel=Error) (default true)
+  -zap-encoder value
+    	Zap log encoding (one of 'json' or 'console')
+  -zap-log-level value
+    	Zap Level to configure the verbosity of logging. Can be one of 'debug', 'info', 'error', or any integer value > 0 which corresponds to custom debug levels of increasing verbosity
+  -zap-stacktrace-level value
+    	Zap Level at and above which stacktraces are captured (one of 'info', 'error').
+```
+
 ## Dex
 
 Instances are managed using the `Dex` resources. `Dex` is a [Custom Resource] that is used to configure
