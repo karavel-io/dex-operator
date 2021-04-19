@@ -158,9 +158,9 @@ A local environment to test it is provided using [Kind].
 ```bash
 make kind-start   # start the local cluster
 
-make install      # install the CRDs and cert-manager
+make install-cert-manager      # install cert-manager
 
-make docker-load  # build and load the docker image into Kind
+make manifests docker-load  # build and load the docker image into Kind
 
 make deploy       # deploy the operator
 ```

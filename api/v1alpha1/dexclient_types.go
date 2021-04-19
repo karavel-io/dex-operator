@@ -22,6 +22,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 )
 
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
+
 // DexClientSpec defines the desired state of DexClient
 type DexClientSpec struct {
 	// Name is the Dex client name
@@ -105,13 +108,13 @@ type DexClientList struct {
 	Items           []DexClient `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&DexClient{}, &DexClientList{})
-}
-
 func (in *DexClient) NamespacedName() types.NamespacedName {
 	return types.NamespacedName{
 		Name:      in.Name,
 		Namespace: in.Namespace,
 	}
+}
+
+func init() {
+	SchemeBuilder.Register(&DexClient{}, &DexClientList{})
 }

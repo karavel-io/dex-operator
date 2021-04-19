@@ -18,19 +18,20 @@ package controllers
 
 import (
 	"context"
-	"github.com/go-logr/logr"
-	dexv1alpha1 "github.com/mikamai/dex-operator/api/v1alpha1"
 	"github.com/mikamai/dex-operator/dex"
 	"github.com/mikamai/dex-operator/utils"
 	v1 "k8s.io/api/core/v1"
 	kuberrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	dexv1alpha1 "github.com/mikamai/dex-operator/api/v1alpha1"
 )
 
 // DexClientReconciler reconciles a DexClient object
@@ -41,12 +42,17 @@ type DexClientReconciler struct {
 	Recorder record.EventRecorder
 }
 
-// +kubebuilder:rbac:groups=dex.karavel.io,resources=dexclients,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=dex.karavel.io,resources=dexclients/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="",resources=secrets;events,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=dex.karavel.io,resources=dexclients,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=dex.karavel.io,resources=dexclients/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=dex.karavel.io,resources=dexclients/finalizers,verbs=update
+//+kubebuilder:rbac:groups="",resources=secrets;events,verbs=get;list;watch;create;update;patch;delete
 
-func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+//
+// For more details, check Reconcile and its Result here:
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
+func (r *DexClientReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("dexclient", req.NamespacedName)
 
 	log.Info("Reconciling DexClient resource")
@@ -73,6 +79,12 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	}
 	if err := r.Client.Get(ctx, k, &d); err != nil && dc.ObjectMeta.DeletionTimestamp.IsZero() {
 		return r.ManageError(ctx, &dc, err)
+	}
+
+	if !d.Status.Ready {
+		return ctrl.Result{
+			RequeueAfter: requeueAfterError,
+		}, nil
 	}
 
 	var svc v1.Service
@@ -164,17 +176,14 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		recreate = true
 	}
 
-	start := metav1.Now()
-
+	r.Recorder.Eventf(&dc, v1.EventTypeNormal, "Asserting", "Asserting on Dex instance %s", k)
 	op, err := dex.AssertDexClient(ctx, log, &svc, &dc, secret, recreate)
 	if err != nil {
 		return r.ManageError(ctx, &dc, err)
 	}
 	if op == dex.OpCreated {
-		r.Recorder.PastEventf(&dc, start, v1.EventTypeNormal, "Creating", "Creating on Dex instance %s", k)
 		r.Recorder.Eventf(&dc, v1.EventTypeNormal, "Created", "Created on Dex instance %s", k)
 	} else if op == dex.OpUpdated {
-		r.Recorder.PastEventf(&dc, start, v1.EventTypeNormal, "Updating", "Updating on Dex instance %s", k)
 		r.Recorder.Eventf(&dc, v1.EventTypeNormal, "Updated", "Updated on Dex instance %s", k)
 	}
 
@@ -182,6 +191,7 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	return r.ManageSuccess(ctx, &dc)
 }
 
+// SetupWithManager sets up the controller with the Manager.
 func (r *DexClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dexv1alpha1.DexClient{}).
