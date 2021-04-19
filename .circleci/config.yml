@@ -41,7 +41,7 @@ jobs:
           name: Run tests
           command: |
             make test
-            go tool cover -html=c.out -o coverage.html
+            go tool cover -html=cover.out -o coverage.html
             mv coverage.html /tmp/artifacts
       - save_cache:
           key: go-mod-v4-{{ checksum "go.sum" }}
