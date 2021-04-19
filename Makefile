@@ -85,6 +85,20 @@ test: manifests generate fmt vet ## Run tests.
 	test -f ${ENVTEST_ASSETS_DIR}/setup-envtest.sh || curl -sSLo ${ENVTEST_ASSETS_DIR}/setup-envtest.sh https://raw.githubusercontent.com/kubernetes-sigs/controller-runtime/v0.7.2/hack/setup-envtest.sh
 	source ${ENVTEST_ASSETS_DIR}/setup-envtest.sh; fetch_envtest_tools $(ENVTEST_ASSETS_DIR); setup_envtest_env $(ENVTEST_ASSETS_DIR); go test ./... -coverprofile cover.out
 
+docker-load: docker-build ## Load the docker image in Kind
+	kind load docker-image --name dex-operator ${IMG}
+
+
+kind-start: ## start the KIND cluster
+	kind create cluster --name dex-operator
+
+
+kind-stop: ## stop the KIND cluster
+	kind delete cluster --name dex-operator
+
+install-cert-manager: ## install cert-manager
+	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml
+
 ##@ Build
 
 build: generate fmt vet ## Build manager binary.
@@ -192,22 +206,3 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
-
-
-# Local KIND cluster
-
-# Load the docker image in Kind
-docker-load: docker-build
-	kind load docker-image --name dex-operator ${IMG}
-
-# start the KIND cluster
-kind-start:
-	kind create cluster --name dex-operator
-
-# stop the KIND cluster
-kind-stop:
-	kind delete cluster --name dex-operator
-
-# install cert-manager
-install-cert-manager:
-	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml

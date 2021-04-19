@@ -1,0 +1,82 @@
+version: 2.1
+
+workflows:
+  build-and-test:
+    jobs:
+      - build
+      - test
+      - vet
+      - build-docker-edge:
+          requires:
+            - build
+            - test
+            - vet
+          filters:
+            branches:
+              only:
+                - master
+
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.15
+    steps:
+      - checkout
+      - restore_cache: # restores saved cache if no changes are detected since last run
+          keys:
+            - go-mod-v4-{{ checksum "go.sum" }}
+      - run: make build
+      - save_cache:
+          key: go-mod-v4-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
+
+  test:
+    docker:
+      - image: circleci/golang:1.15
+    steps:
+      - checkout
+      - restore_cache: # restores saved cache if no changes are detected since last run
+          keys:
+            - go-mod-v4-{{ checksum "go.sum" }}
+      - run: mkdir -p /tmp/test-results
+      - run:
+          name: Run tests
+          command: |
+            PACKAGE_NAMES=$(go list ./... | circleci tests split --split-by=timings --timings-type=classname)
+            gotestsum --junitfile ${TEST_RESULTS}/gotestsum-report.xml -- $PACKAGE_NAMES
+      - save_cache:
+          key: go-mod-v4-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
+      - store_artifacts: # upload test summary for display in Artifacts
+          path: cover.out
+          destination: raw-test-output
+      - store_test_results: # upload test results for display in Test Summary
+          path: cover.out
+
+  vet:
+    docker:
+      - image: circleci/golang:1.15
+    steps:
+      - checkout
+      - restore_cache: # restores saved cache if no changes are detected since last run
+          keys:
+            - go-mod-v4-{{ checksum "go.sum" }}
+      - run: make vet
+      - save_cache:
+          key: go-mod-v4-{{ checksum "go.sum" }}
+          paths:
+            - "/go/pkg/mod"
+
+  build-docker-edge:
+    docker:
+      - image: circleci/golang:1.15
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: 19.03.13
+      - run: echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin quay.io
+      - run: docker pull quay.io/karavel/dex-operator:edge || true
+      - run: docker build -t quay.io/karavel/dex-operator:edge .
+      - run: docker push quay.io/karavel/dex-operator:edge
