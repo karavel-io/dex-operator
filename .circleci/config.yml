@@ -5,12 +5,10 @@ workflows:
     jobs:
       - build
       - test
-      - vet
       - build-docker-edge:
           requires:
             - build
             - test
-            - vet
           filters:
             branches:
               only:
@@ -42,7 +40,7 @@ jobs:
       - run:
           name: Run tests
           command: |
-            make tests
+            make test
             go tool cover -html=c.out -o coverage.html
             mv coverage.html /tmp/artifacts
       - save_cache:
@@ -55,20 +53,6 @@ jobs:
 
       - store_test_results: # upload test results for display in Test Summary
           path: /tmp/artifacts
-
-  vet:
-    docker:
-      - image: circleci/golang:1.15
-    steps:
-      - checkout
-      - restore_cache: # restores saved cache if no changes are detected since last run
-          keys:
-            - go-mod-v4-{{ checksum "go.sum" }}
-      - run: make vet
-      - save_cache:
-          key: go-mod-v4-{{ checksum "go.sum" }}
-          paths:
-            - "/go/pkg/mod"
 
   build-docker-edge:
     docker:
