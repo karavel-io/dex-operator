@@ -40,9 +40,10 @@ jobs:
       - run:
           name: Run tests
           command: |
+            mkdir -p /tmp/artifacts
             make test
             go tool cover -html=cover.out -o coverage.html
-            mv coverage.html /tmp/artifacts/coverage.html
+            mv coverage.html /tmp/artifacts
       - save_cache:
           key: go-mod-v4-{{ checksum "go.sum" }}
           paths:
