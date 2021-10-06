@@ -1,5 +1,9 @@
 # Dex Operator
 
+> :warning: **THIS SOFTWARE IS ALPHA** Do not use in production, expect bugs and other issues.  
+> On the other hand, you are very much encouraged to try it in test environments, and report any bug or DX issues to the
+> [issue tracker](https://github.com/karavel-io/dex-operator/issues) if you want to help us improve the project!
+
 A [Kubernetes Operator] for [Dex]. It can deploy and manage Dex instances as well as
 declaratively configure client applications.
 
