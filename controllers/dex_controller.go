@@ -22,7 +22,7 @@ import (
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	networkingv1beta1 "k8s.io/api/networking/v1beta1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -217,7 +217,7 @@ func (r *DexReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 	if err != nil {
 		return r.ManageError(ctx, &d, err)
 	}
-	ingo := new(networkingv1beta1.Ingress)
+	ingo := new(networkingv1.Ingress)
 	ingo.Name = ing.Name
 	ingo.Namespace = ing.Namespace
 	if *d.Spec.Ingress.Enabled {
@@ -254,7 +254,7 @@ func (r *DexReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&rbacv1.ClusterRoleBinding{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&v1.Service{}).
-		Owns(&networkingv1beta1.Ingress{}).
+		Owns(&networkingv1.Ingress{}).
 		Complete(r)
 }
 
