@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"github.com/go-logr/logr"
 	"github.com/mikamai/dex-operator/dex"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
@@ -27,18 +26,20 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"time"
+
+	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	dexv1alpha1 "github.com/mikamai/dex-operator/api/v1alpha1"
 )
 
 var (
-	requeueAfterError = 5 * time.Second
+	requeueAfterError = 30 * time.Second
 )
 
 // DexReconciler reconciles a Dex object
@@ -51,6 +52,7 @@ type DexReconciler struct {
 
 // +kubebuilder:rbac:groups=dex.karavel.io,resources=dexes,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=dex.karavel.io,resources=dexes/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=dex.karavel.io,resources=dexes/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=events;configmaps;serviceaccounts;services,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch
 // +kubebuilder:rbac:groups=networking.k8s.io,resources=ingresses,verbs=get;list;watch;create;update;patch;delete
@@ -58,8 +60,12 @@ type DexReconciler struct {
 // +kubebuilder:rbac:groups=dex.coreos.com,resources=*,verbs=*
 // +kubebuilder:rbac:groups=apiextensions.k8s.io,resources=customresourcedefinitions,verbs=create
 
-func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+// Reconcile is part of the main kubernetes reconciliation loop which aims to
+// move the current state of the cluster closer to the desired state.
+//
+// For more details, check Reconcile and its Result here:
+// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.7.2/pkg/reconcile
+func (r *DexReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("dex", req.NamespacedName)
 
 	log.Info("Reconciling Dex resource")
@@ -68,16 +74,16 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	first := d.CreationTimestamp.IsZero()
-	if first && d.Status.Phase != dexv1alpha1.PhaseInitialising {
+	first := d.Status.Phase == dexv1alpha1.NoPhase
+	if first {
 		d.Status.Phase = dexv1alpha1.PhaseInitialising
 		d.Status.Ready = false
 		if err := r.Client.Status().Update(ctx, &d); err != nil {
 			return r.ManageError(ctx, &d, err)
 		}
+		r.Recorder.Eventf(&d, v1.EventTypeNormal, "Creating", "Creating resources")
 	}
 
-	//start := metav1.Now()
 	cm, err := dex.ConfigMap(&d)
 	if err != nil {
 		return ctrl.Result{RequeueAfter: requeueAfterError}, err
@@ -227,14 +233,14 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 	}
 
-	//if first {
-	//	r.Recorder.PastEventf(&d, start, v1.EventTypeNormal, "Creating", "Creating resources")
-	//	r.Recorder.Event(&d, v1.EventTypeNormal, "Created", "Creating resources")
-	//}
+	if first {
+		r.Recorder.Event(&d, v1.EventTypeNormal, "Created", "Creating resources")
+	}
 	log.Info("Finished reconciling Dex resource")
 	return r.ManageSuccess(ctx, &d)
 }
 
+// SetupWithManager sets up the controller with the Manager.
 func (r *DexReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&dexv1alpha1.Dex{}).
@@ -255,7 +261,6 @@ func (r *DexReconciler) ManageSuccess(ctx context.Context, dex *dexv1alpha1.Dex)
 	if err := r.Client.Status().Update(ctx, dex); err != nil {
 		return ctrl.Result{
 			RequeueAfter: requeueAfterError,
-			Requeue:      true,
 		}, err
 	}
 	return ctrl.Result{}, nil

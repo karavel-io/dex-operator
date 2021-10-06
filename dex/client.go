@@ -23,24 +23,24 @@ const (
 	OpDeleted    = "deleted"
 )
 
-func Secret(dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
-	data := map[string]string{
-		"clientId": dc.ClientID(),
-	}
+func ShouldRecreateClientSecret(dc *dexv1alpha1.DexClient, obj *v1.Secret) bool {
+	idKey := dc.Spec.ClientIDKey
+	secretKey := dc.Spec.ClientSecretKey
 
+	return obj.Data[idKey] == nil || obj.Data[secretKey] == nil
+}
+
+func Secret(dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
+	idKey := dc.Spec.ClientIDKey
+	secretKey := dc.Spec.ClientSecretKey
+	secret, err := utils.GenerateRandomString(15)
+	if err != nil {
+		return v1.Secret{}, "", err
+	}
+	
 	tpl := dc.Spec.Template
 	if tpl.ObjectMeta.Name == "" {
 		tpl.ObjectMeta.Name = fmt.Sprintf("dex-%s-credentials", dc.Name)
-	}
-
-	var secret string
-	if !dc.Spec.Public {
-		s, err := utils.GenerateRandomString(15)
-		if err != nil {
-			return v1.Secret{}, "", err
-		}
-		data["clientSecret"] = s
-		secret = s
 	}
 
 	return v1.Secret{
@@ -50,11 +50,18 @@ func Secret(dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
 			Labels:      tpl.ObjectMeta.Labels,
 			Annotations: tpl.ObjectMeta.Annotations,
 		},
-		StringData: data,
+		StringData: map[string]string{
+			idKey:     dc.ClientID(),
+			secretKey: secret,
+		},
 	}, secret, nil
 }
 
 func AssertDexClient(ctx context.Context, log logr.Logger, host string, client *dexv1alpha1.DexClient, secret string, recreate bool) (Op, error) {
+	if secret == "" {
+		return OpNone, errors.New("a client must have a secret")
+	}
+
 	if recreate {
 		_, err := DeleteDexClient(ctx, log, host, client)
 		if err != nil {
@@ -72,14 +79,6 @@ func AssertDexClient(ctx context.Context, log logr.Logger, host string, client *
 	uris := client.Spec.RedirectUris
 	public := client.Spec.Public
 	log.Info("Asserting DexClient", "id", id, "name", name, "redirectUris", uris, "public", public)
-
-	if public && secret != "" {
-		return OpNone, errors.New("a public client cannot have a secret")
-	}
-
-	if !public && secret == "" {
-		return OpNone, errors.New("a confidential client must have a secret")
-	}
 
 	creq := &api.CreateClientReq{
 		Client: &api.Client{

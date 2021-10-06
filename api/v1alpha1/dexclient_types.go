@@ -19,7 +19,11 @@ package v1alpha1
 import (
 	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
+
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // DexClientSpec defines the desired state of DexClient
 type DexClientSpec struct {
@@ -38,6 +42,16 @@ type DexClientSpec struct {
 	// InstanceRef is used to select the target Dex instance
 	// Cannot be updated
 	InstanceRef InstanceRef `json:"instanceRef"`
+
+	// ClientIDKey allows to override the key used in the generated Secret for the clientID
+	// +kubebuilder:default:=clientID
+	// +optional
+	ClientIDKey string `json:"clientIDKey"`
+
+	// ClientSecretKey allows to override the key used in the generated Secret for the clientSecret
+	// +kubebuilder:default:=clientSecret
+	// +optional
+	ClientSecretKey string `json:"clientSecretKey"`
 
 	// Template will be merged with the generated Secret object
 	Template SecretTemplate `json:"template,omitempty"`
@@ -124,6 +138,13 @@ type DexClientList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []DexClient `json:"items"`
+}
+
+func (in *DexClient) NamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Name:      in.Name,
+		Namespace: in.Namespace,
+	}
 }
 
 func init() {

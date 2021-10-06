@@ -17,7 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"net/url"
@@ -39,7 +41,9 @@ func (in *Dex) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// +kubebuilder:webhook:path=/mutate-dex-karavel-io-v1alpha1-dex,mutating=true,failurePolicy=fail,groups=dex.karavel.io,resources=dexes,verbs=create;update,versions=v1alpha1,name=mdex.kb.io
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+
+// +kubebuilder:webhook:path=/mutate-dex-karavel-io-v1alpha1-dex,mutating=true,failurePolicy=fail,sideEffects=None,groups=dex.karavel.io,resources=dexes,verbs=create;update,versions=v1alpha1,name=mdex.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Defaulter = &Dex{}
 
@@ -54,10 +58,24 @@ func (in *Dex) Default() {
 	if in.Spec.ServiceAccountName == "" {
 		in.Spec.ServiceAccountName = in.Name
 	}
+
+	if in.Spec.Resources.Limits == nil {
+		in.Spec.Resources.Limits = map[v1.ResourceName]resource.Quantity{
+			"cpu":    resource.MustParse("200m"),
+			"memory": resource.MustParse("200Mi"),
+		}
+	}
+
+	if in.Spec.Resources.Requests == nil {
+		in.Spec.Resources.Requests = map[v1.ResourceName]resource.Quantity{
+			"cpu":    resource.MustParse("100m"),
+			"memory": resource.MustParse("100Mi"),
+		}
+	}
 }
 
 // Change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-// +kubebuilder:webhook:verbs=create;update,path=/validate-dex-karavel-io-v1alpha1-dex,mutating=false,failurePolicy=fail,groups=dex.karavel.io,resources=dexes,versions=v1alpha1,name=vdex.kb.io
+// +kubebuilder:webhook:verbs=create;update,path=/validate-dex-karavel-io-v1alpha1-dex,mutating=false,failurePolicy=fail,sideEffects=None,groups=dex.karavel.io,resources=dexes,versions=v1alpha1,name=vdex.kb.io,admissionReviewVersions={v1,v1beta1}
 
 var _ webhook.Validator = &Dex{}
 

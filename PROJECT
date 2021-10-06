@@ -1,10 +1,35 @@
 domain: karavel.io
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: new
 repo: github.com/mikamai/dex-operator
 resources:
-- group: dex
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: karavel.io
+  group: dex
   kind: Dex
+  path: github.com/mikamai/dex-operator/api/v1alpha1
   version: v1alpha1
-- group: dex
+  webhooks:
+    defaulting: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: karavel.io
+  group: dex
   kind: DexClient
+  path: github.com/mikamai/dex-operator/api/v1alpha1
   version: v1alpha1
-version: "2"
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
+version: "3"

@@ -71,6 +71,12 @@ rules:
 - apiGroups:
   - dex.karavel.io
   resources:
+  - dexclients/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - dex.karavel.io
+  resources:
   - dexclients/status
   verbs:
   - get
@@ -88,6 +94,12 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - dex.karavel.io
+  resources:
+  - dexes/finalizers
+  verbs:
+  - update
 - apiGroups:
   - dex.karavel.io
   resources:

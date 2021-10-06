@@ -19,24 +19,29 @@ package v1alpha1
 import (
 	"fmt"
 	v1 "k8s.io/api/core/v1"
+	extv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 )
 
+// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 type StatusPhase string
 
 var (
+	NoPhase           StatusPhase
 	PhaseFailing      StatusPhase = "failing"
 	PhaseInitialising StatusPhase = "initialising"
 	PhaseActive       StatusPhase = "active"
 )
 
 type Connector struct {
-	Type   string `json:"type"`
-	Name   string `json:"name"`
-	ID     string `json:"id"`
-	Config string `json:"config,omitempty"`
+	Type    string     `json:"type"`
+	Name    string     `json:"name"`
+	ID      string     `json:"id"`
+	Config  extv1.JSON `json:"config,omitempty"`
+	ConfigS string     `json:"-"`
 }
 
 // DexSpec defines the desired state of Dex
@@ -170,10 +175,6 @@ type DexList struct {
 	Items           []Dex `json:"items"`
 }
 
-func init() {
-	SchemeBuilder.Register(&Dex{}, &DexList{})
-}
-
 func (in *Dex) BuildOwnerReference() metav1.OwnerReference {
 	return metav1.OwnerReference{
 		APIVersion: in.APIVersion,
@@ -183,6 +184,17 @@ func (in *Dex) BuildOwnerReference() metav1.OwnerReference {
 	}
 }
 
+func (in *Dex) NamespacedName() types.NamespacedName {
+	return types.NamespacedName{
+		Name:      in.Name,
+		Namespace: in.Namespace,
+	}
+}
+
 func (in *Dex) ServiceName() string {
 	return fmt.Sprintf("%s-operated", in.Name)
+}
+
+func init() {
+	SchemeBuilder.Register(&Dex{}, &DexList{})
 }

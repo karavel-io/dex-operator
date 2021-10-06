@@ -7,6 +7,7 @@ import (
 	"github.com/mikamai/dex-operator/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
@@ -75,6 +76,20 @@ func Deployment(dex *dexv1alpha1.Dex, cm *v1.ConfigMap, sa *v1.ServiceAccount) a
 	csum := fmt.Sprintf("%x", sha256.Sum256([]byte(cm.Data["config.yaml"])))
 	labels := utils.ShallowCopyLabels(dex.Spec.InstanceLabels)
 	labels[InstanceMarkerLabel] = dex.Name
+
+	if dex.Spec.Resources.Limits == nil {
+		dex.Spec.Resources.Limits = map[v1.ResourceName]resource.Quantity{
+			"cpu":    resource.MustParse("200m"),
+			"memory": resource.MustParse("200Mi"),
+		}
+	}
+
+	if dex.Spec.Resources.Requests == nil {
+		dex.Spec.Resources.Requests = map[v1.ResourceName]resource.Quantity{
+			"cpu":    resource.MustParse("100m"),
+			"memory": resource.MustParse("100Mi"),
+		}
+	}
 
 	return appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
