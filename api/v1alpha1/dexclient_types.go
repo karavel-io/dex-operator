@@ -38,6 +38,9 @@ type DexClientSpec struct {
 	// InstanceRef is used to select the target Dex instance
 	// Cannot be updated
 	InstanceRef InstanceRef `json:"instanceRef"`
+
+	// Template will be merged with the generated Secret object
+	Template SecretTemplate `json:"template,omitempty"`
 }
 
 type InstanceRef struct {
@@ -49,6 +52,35 @@ type InstanceRef struct {
 	// If empty will default to the same namespace as the DexClient
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
+}
+
+// SecretTemplate is used to customize parts of the generated secret
+type SecretTemplate struct {
+	ObjectMeta SecretMeta `json:"metadata,omitempty"`
+}
+
+type SecretMeta struct {
+	// Name must be unique within a namespace. Is required when creating resources, although
+	// some resources may allow a client to request the generation of an appropriate name
+	// automatically. Name is primarily intended for creation idempotence and configuration
+	// definition.
+	// Cannot be updated.
+	// More info: http://kubernetes.io/docs/user-guide/identifiers#names
+	// +optional
+	Name string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+	// Map of string keys and values that can be used to organize and categorize
+	// (scope and select) objects. May match selectors of replication controllers
+	// and services.
+	// More info: http://kubernetes.io/docs/user-guide/labels
+	// +optional
+	Labels map[string]string `json:"labels,omitempty" protobuf:"bytes,11,rep,name=labels"`
+
+	// Annotations is an unstructured key value map stored with a resource that may be
+	// set by external tools to store and retrieve arbitrary metadata. They are not
+	// queryable and should be preserved when modifying objects.
+	// More info: http://kubernetes.io/docs/user-guide/annotations
+	// +optional
+	Annotations map[string]string `json:"annotations,omitempty" protobuf:"bytes,12,rep,name=annotations"`
 }
 
 // DexClientStatus defines the observed state of DexClient

@@ -30,7 +30,7 @@ import (
 var dexlog = logf.Log.WithName("dex-resource")
 
 const (
-	DexDefaultImage = "quay.io/dexidp/dex:latest"
+	DexDefaultImage = "ghcr.io/dexidp/dex:latest"
 )
 
 func (in *Dex) SetupWebhookWithManager(mgr ctrl.Manager) error {

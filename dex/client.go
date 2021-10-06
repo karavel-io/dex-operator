@@ -28,6 +28,11 @@ func Secret(dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
 		"clientId": dc.ClientID(),
 	}
 
+	tpl := dc.Spec.Template
+	if tpl.ObjectMeta.Name == "" {
+		tpl.ObjectMeta.Name = fmt.Sprintf("dex-%s-credentials", dc.Name)
+	}
+
 	var secret string
 	if !dc.Spec.Public {
 		s, err := utils.GenerateRandomString(15)
@@ -37,24 +42,27 @@ func Secret(dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
 		data["clientSecret"] = s
 		secret = s
 	}
+
 	return v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("dex-%s-credentials", dc.Name),
-			Namespace: dc.Namespace,
+			Name:        tpl.ObjectMeta.Name,
+			Namespace:   dc.Namespace,
+			Labels:      tpl.ObjectMeta.Labels,
+			Annotations: tpl.ObjectMeta.Annotations,
 		},
 		StringData: data,
 	}, secret, nil
 }
 
-func AssertDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, client *dexv1alpha1.DexClient, secret string, recreate bool) (Op, error) {
+func AssertDexClient(ctx context.Context, log logr.Logger, host string, client *dexv1alpha1.DexClient, secret string, recreate bool) (Op, error) {
 	if recreate {
-		_, err := DeleteDexClient(ctx, log, svc, client)
+		_, err := DeleteDexClient(ctx, log, host, client)
 		if err != nil {
 			return OpNone, err
 		}
 	}
 
-	a, err := buildDexApi(log, svc, "")
+	a, err := buildDexApi(log, host, "")
 	if err != nil {
 		return OpNone, err
 	}
@@ -107,8 +115,8 @@ func AssertDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, clie
 	return OpUpdated, nil
 }
 
-func DeleteDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, client *dexv1alpha1.DexClient) (Op, error) {
-	a, err := buildDexApi(log, svc, "")
+func DeleteDexClient(ctx context.Context, log logr.Logger, host string, client *dexv1alpha1.DexClient) (Op, error) {
+	a, err := buildDexApi(log, host, "")
 	if err != nil {
 		return OpNone, err
 	}
@@ -132,20 +140,7 @@ func DeleteDexClient(ctx context.Context, log logr.Logger, svc *v1.Service, clie
 	return OpDeleted, nil
 }
 
-func buildDexApi(log logr.Logger, svc *v1.Service, caPath string) (api.DexClient, error) {
-	var port *int32
-	for _, p := range svc.Spec.Ports {
-		if p.Name == "grpc" {
-			port = &p.Port
-			break
-		}
-	}
-
-	if port == nil {
-		return nil, errors.Errorf("no port named 'grpc' found in service %s/%s", svc.Namespace, svc.Name)
-	}
-
-	host := fmt.Sprintf("%s.%s:%d", svc.Name, svc.Namespace, *port)
+func buildDexApi(log logr.Logger, host string, caPath string) (api.DexClient, error) {
 	log.Info("Opening gRPC connection", "host", host)
 	opts := make([]grpc.DialOption, 0)
 	if caPath != "" {

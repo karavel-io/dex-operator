@@ -165,7 +165,8 @@ func (r *DexReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	d.Status.Selector = sel.String()
 	d.Status.Replicas = *depo.Spec.Replicas
 
-	svc := dex.Service(&d)
+	svc, host := dex.Service(&d)
+	d.Status.EndpointURL = host
 	svco := new(v1.Service)
 	svco.Name = svc.Name
 	svco.Namespace = svc.Namespace

@@ -134,6 +134,8 @@ type DexStatus struct {
 	Replicas int32 `json:"replicas"`
 	// Selector is the label selector for the instance pods
 	Selector string `json:"selector"`
+	// EndpointURL contains the API endpoint for the Dex instance
+	EndpointURL string `json:"endpointURL"`
 }
 
 type DexConditionType string

@@ -48,7 +48,7 @@ func (in *DexClient) ValidateCreate() error {
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (in *DexClient) ValidateUpdate(old runtime.Object) error {
-	dexclientlog.Info("validate update", "name", in.Name)
+	dexclientlog.Info("validate update", "name", in.Name, "new", in, "old", old)
 	gr := schema.GroupResource{
 		Group:    in.GroupVersionKind().Group,
 		Resource: "dexclients",

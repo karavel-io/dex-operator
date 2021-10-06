@@ -13,9 +13,11 @@ import (
 
 const (
 	InstanceMarkerLabel = "dex.karavel.io/instance"
+	PortHttps           = 5556
+	PortGrpc            = 5557
 )
 
-func Service(dex *dexv1alpha1.Dex) v1.Service {
+func Service(dex *dexv1alpha1.Dex) (v1.Service, string) {
 	labels := utils.ShallowCopyLabels(dex.Spec.InstanceLabels)
 	labels[InstanceMarkerLabel] = dex.Name
 	return v1.Service{
@@ -30,19 +32,19 @@ func Service(dex *dexv1alpha1.Dex) v1.Service {
 			Ports: []v1.ServicePort{
 				{
 					Name:       "https",
-					Port:       5556,
+					Port:       PortHttps,
 					Protocol:   v1.ProtocolTCP,
 					TargetPort: intstr.FromString("https"),
 				},
 				{
 					Name:       "grpc",
-					Port:       5557,
+					Port:       PortGrpc,
 					Protocol:   v1.ProtocolTCP,
 					TargetPort: intstr.FromString("grpc"),
 				},
 			},
 		},
-	}
+	}, fmt.Sprintf("%s.%s:%d", dex.ServiceName(), dex.Namespace, PortGrpc)
 }
 
 func MetricsService(dex *dexv1alpha1.Dex) v1.Service {

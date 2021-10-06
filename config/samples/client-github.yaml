@@ -8,3 +8,7 @@ spec:
     - https://example.com/oauth/callback
   instanceRef:
     name: github
+  template:
+    metadata:
+      labels:
+        hello: world

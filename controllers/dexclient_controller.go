@@ -75,17 +75,9 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return r.ManageError(ctx, &dc, err)
 	}
 
-	var svc v1.Service
-	svk := types.NamespacedName{
-		Name:      d.ServiceName(),
-		Namespace: d.Namespace,
-	}
-	if err := r.Client.Get(ctx, svk, &svc); err != nil && dc.ObjectMeta.DeletionTimestamp.IsZero() {
-		return r.ManageError(ctx, &dc, err)
-	}
-
 	log = log.WithValues("dex", k)
 
+	host := d.Status.EndpointURL
 	finalizer := "clients.finalizers.dex.karavel.io"
 	if dc.ObjectMeta.DeletionTimestamp.IsZero() {
 		if !utils.ContainsString(dc.ObjectMeta.Finalizers, finalizer) {
@@ -97,17 +89,15 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 	} else {
 		if utils.ContainsString(dc.ObjectMeta.Finalizers, finalizer) {
-			if !svc.CreationTimestamp.IsZero() {
-				// our finalizer is present, so lets handle any external dependency
-				op, err := dex.DeleteDexClient(ctx, log, &svc, &dc)
-				if err != nil {
-					// if fail to delete the external dependency here, return with error
-					// so that it can be retried
-					return r.ManageError(ctx, &dc, err)
-				}
-				if op == dex.OpDeleted {
-					r.Recorder.Eventf(&dc, v1.EventTypeNormal, "Deleted", "deleted client from Dex instance")
-				}
+			// our finalizer is present, so lets handle any external dependency
+			op, err := dex.DeleteDexClient(ctx, log, host, &dc)
+			if err != nil {
+				// if fail to delete the external dependency here, return with error
+				// so that it can be retried
+				return r.ManageError(ctx, &dc, err)
+			}
+			if op == dex.OpDeleted {
+				r.Recorder.Eventf(&dc, v1.EventTypeNormal, "Deleted", "deleted client from Dex instance")
 			}
 
 			// remove our finalizer from the list and update it.
@@ -157,7 +147,7 @@ func (r *DexClientReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 
 	start := metav1.Now()
 
-	op, err := dex.AssertDexClient(ctx, log, &svc, &dc, secret, recreate)
+	op, err := dex.AssertDexClient(ctx, log, host, &dc, secret, recreate)
 	if err != nil {
 		return r.ManageError(ctx, &dc, err)
 	}

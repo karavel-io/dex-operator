@@ -1064,6 +1064,9 @@ spec:
           status:
             description: DexStatus defines the observed state of Dex
             properties:
+              endpointURL:
+                description: EndpointURL contains the API endpoint for the Dex instance
+                type: string
               message:
                 description: Human-readable message indicating details about current
                   operator phase or error.
@@ -1083,6 +1086,7 @@ spec:
                 description: Selector is the label selector for the instance pods
                 type: string
             required:
+            - endpointURL
             - message
             - phase
             - ready
