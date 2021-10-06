@@ -31,8 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	dexv1alpha1 "github.com/mikamai/dex-operator/api/v1alpha1"
-	"github.com/mikamai/dex-operator/controllers"
+	dexv1alpha1 "github.com/karavel-io/dex-operator/api/v1alpha1"
+	"github.com/karavel-io/dex-operator/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -48,15 +48,21 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+const (
+	DexDefaultImage = "ghcr.io/dexidp/dex:latest"
+)
+
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var dexDefaultImage string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.StringVar(&dexDefaultImage, "dex-default-image", DexDefaultImage, "The default container image for Dex instances")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -79,10 +85,11 @@ func main() {
 	}
 
 	if err = (&controllers.DexReconciler{
-		Client:   mgr.GetClient(),
-		Log:      ctrl.Log.WithName("controllers").WithName("Dex"),
-		Scheme:   mgr.GetScheme(),
-		Recorder: mgr.GetEventRecorderFor("dex-operator"),
+		Client:       mgr.GetClient(),
+		Log:          ctrl.Log.WithName("controllers").WithName("Dex"),
+		Scheme:       mgr.GetScheme(),
+		Recorder:     mgr.GetEventRecorderFor("dex-operator"),
+		DefaultImage: dexDefaultImage,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Dex")
 		os.Exit(1)

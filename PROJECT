@@ -5,7 +5,7 @@ plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: new
-repo: github.com/mikamai/dex-operator
+repo: github.com/karavel-io/dex-operator
 resources:
 - api:
     crdVersion: v1
@@ -14,7 +14,7 @@ resources:
   domain: karavel.io
   group: dex
   kind: Dex
-  path: github.com/mikamai/dex-operator/api/v1alpha1
+  path: github.com/karavel-io/dex-operator/api/v1alpha1
   version: v1alpha1
   webhooks:
     defaulting: true
@@ -26,7 +26,7 @@ resources:
   domain: karavel.io
   group: dex
   kind: DexClient
-  path: github.com/mikamai/dex-operator/api/v1alpha1
+  path: github.com/karavel-io/dex-operator/api/v1alpha1
   version: v1alpha1
   webhooks:
     defaulting: true

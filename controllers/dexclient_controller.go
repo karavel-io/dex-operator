@@ -18,8 +18,8 @@ package controllers
 
 import (
 	"context"
-	"github.com/mikamai/dex-operator/dex"
-	"github.com/mikamai/dex-operator/utils"
+	"github.com/karavel-io/dex-operator/dex"
+	"github.com/karavel-io/dex-operator/utils"
 	v1 "k8s.io/api/core/v1"
 	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -31,7 +31,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dexv1alpha1 "github.com/mikamai/dex-operator/api/v1alpha1"
+	dexv1alpha1 "github.com/karavel-io/dex-operator/api/v1alpha1"
 )
 
 // DexClientReconciler reconciles a DexClient object
@@ -162,6 +162,8 @@ func (r *DexClientReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	if recreate {
 		log.Info("Secret is missing, creating", "secret", seco.Name)
+		seco.Labels = sec.Labels
+		seco.Annotations = sec.Annotations
 		seco.Data = map[string][]byte{}
 		seco.StringData = sec.StringData
 		if err := controllerutil.SetControllerReference(&dc, seco, r.Scheme); err != nil {

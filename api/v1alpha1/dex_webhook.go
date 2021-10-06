@@ -31,10 +31,6 @@ import (
 // log is for logging in this package.
 var dexlog = logf.Log.WithName("dex-resource")
 
-const (
-	DexDefaultImage = "ghcr.io/dexidp/dex:latest"
-)
-
 func (in *Dex) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(in).
@@ -50,10 +46,6 @@ var _ webhook.Defaulter = &Dex{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (in *Dex) Default() {
 	dexlog.Info("default", "name", in.Name)
-
-	if in.Spec.Image == "" {
-		in.Spec.Image = DexDefaultImage
-	}
 
 	if in.Spec.ServiceAccountName == "" {
 		in.Spec.ServiceAccountName = in.Name

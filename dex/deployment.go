@@ -3,8 +3,8 @@ package dex
 import (
 	"crypto/sha256"
 	"fmt"
-	dexv1alpha1 "github.com/mikamai/dex-operator/api/v1alpha1"
-	"github.com/mikamai/dex-operator/utils"
+	dexv1alpha1 "github.com/karavel-io/dex-operator/api/v1alpha1"
+	"github.com/karavel-io/dex-operator/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"

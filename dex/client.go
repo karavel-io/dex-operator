@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"github.com/dexidp/dex/api/v2"
 	"github.com/go-logr/logr"
-	dexv1alpha1 "github.com/mikamai/dex-operator/api/v1alpha1"
-	"github.com/mikamai/dex-operator/utils"
+	dexv1alpha1 "github.com/karavel-io/dex-operator/api/v1alpha1"
+	"github.com/karavel-io/dex-operator/utils"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -37,7 +37,7 @@ func Secret(dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
 	if err != nil {
 		return v1.Secret{}, "", err
 	}
-	
+
 	tpl := dc.Spec.Template
 	if tpl.ObjectMeta.Name == "" {
 		tpl.ObjectMeta.Name = fmt.Sprintf("dex-%s-credentials", dc.Name)

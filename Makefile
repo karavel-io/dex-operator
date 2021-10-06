@@ -90,11 +90,11 @@ docker-load: docker-build ## Load the docker image in Kind
 
 
 kind-start: ## start the KIND cluster
-	kind create cluster --name dex-operator
+	kind create cluster --config hack/kind.yaml
 
 
 kind-stop: ## stop the KIND cluster
-	kind delete cluster --name dex-operator
+	kind delete cluster --config hack/kind.yaml
 
 install-cert-manager: ## install cert-manager
 	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v1.3.1/cert-manager.yaml

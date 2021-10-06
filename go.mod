@@ -1,4 +1,4 @@
-module github.com/mikamai/dex-operator
+module github.com/karavel-io/dex-operator
 
 go 1.15
 

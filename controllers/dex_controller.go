@@ -18,7 +18,7 @@ package controllers
 
 import (
 	"context"
-	"github.com/mikamai/dex-operator/dex"
+	"github.com/karavel-io/dex-operator/dex"
 	"github.com/pkg/errors"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -35,7 +35,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dexv1alpha1 "github.com/mikamai/dex-operator/api/v1alpha1"
+	dexv1alpha1 "github.com/karavel-io/dex-operator/api/v1alpha1"
 )
 
 var (
@@ -45,9 +45,10 @@ var (
 // DexReconciler reconciles a Dex object
 type DexReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
+	Log          logr.Logger
+	Scheme       *runtime.Scheme
+	Recorder     record.EventRecorder
+	DefaultImage string
 }
 
 // +kubebuilder:rbac:groups=dex.karavel.io,resources=dexes,verbs=get;list;watch;create;update;patch;delete
@@ -82,6 +83,10 @@ func (r *DexReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 			return r.ManageError(ctx, &d, err)
 		}
 		r.Recorder.Eventf(&d, v1.EventTypeNormal, "Creating", "Creating resources")
+	}
+
+	if d.Spec.Image == "" {
+		d.Spec.Image = r.DefaultImage
 	}
 
 	cm, err := dex.ConfigMap(&d)

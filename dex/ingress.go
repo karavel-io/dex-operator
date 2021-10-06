@@ -1,7 +1,7 @@
 package dex
 
 import (
-	dexv1alpha1 "github.com/mikamai/dex-operator/api/v1alpha1"
+	dexv1alpha1 "github.com/karavel-io/dex-operator/api/v1alpha1"
 	networkingv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
