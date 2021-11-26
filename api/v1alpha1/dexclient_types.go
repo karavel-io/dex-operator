@@ -53,6 +53,11 @@ type DexClientSpec struct {
 	// +optional
 	ClientSecretKey string `json:"clientSecretKey"`
 
+	// IssuerKey allows to override the key used in the generated Secret for the issuer URL
+	// +kubebuilder:default:=issuerURL
+	// +optional
+	IssuerURLKey string `json:"issuerURLKey"`
+
 	// Template will be merged with the generated Secret object
 	Template SecretTemplate `json:"template,omitempty"`
 }

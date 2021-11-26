@@ -12,3 +12,6 @@ spec:
     metadata:
       labels:
         hello: world
+  clientIDKey: GITHUB_CLIENT_ID
+  clientSecretKey: GITHUB_CLIENT_SECRET
+  issuerURLKey: GITHUB_ISSUER_URL

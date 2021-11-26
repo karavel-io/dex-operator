@@ -231,6 +231,7 @@ func (r *DexReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.R
 		if err != nil {
 			return r.ManageError(ctx, &d, errors.Wrap(err, "failed to reconcile Ingress"))
 		}
+
 	} else {
 		log.Info("Removing Ingress", "name", ingo.Name, "namespace", ingo.Namespace, "version", ingo.ResourceVersion)
 		if err := r.Client.Delete(ctx, ingo); err != nil && !kuberrors.IsNotFound(err) {

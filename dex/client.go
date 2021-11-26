@@ -30,7 +30,7 @@ func ShouldRecreateClientSecret(dc *dexv1alpha1.DexClient, obj *v1.Secret) bool 
 	return obj.Data[idKey] == nil || obj.Data[secretKey] == nil
 }
 
-func Secret(dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
+func Secret(d *dexv1alpha1.Dex, dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
 	idKey := dc.Spec.ClientIDKey
 	secretKey := dc.Spec.ClientSecretKey
 	secret, err := utils.GenerateRandomString(15)
@@ -43,6 +43,15 @@ func Secret(dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
 		tpl.ObjectMeta.Name = fmt.Sprintf("dex-%s-credentials", dc.Name)
 	}
 
+	data := map[string]string{
+		idKey:     dc.ClientID(),
+		secretKey: secret,
+	}
+
+	if d.Spec.PublicURL != "" {
+		data[dc.Spec.IssuerURLKey] = d.Spec.PublicURL
+	}
+
 	return v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        tpl.ObjectMeta.Name,
@@ -50,10 +59,7 @@ func Secret(dc *dexv1alpha1.DexClient) (v1.Secret, string, error) {
 			Labels:      tpl.ObjectMeta.Labels,
 			Annotations: tpl.ObjectMeta.Annotations,
 		},
-		StringData: map[string]string{
-			idKey:     dc.ClientID(),
-			secretKey: secret,
-		},
+		StringData: data,
 	}, secret, nil
 }
 

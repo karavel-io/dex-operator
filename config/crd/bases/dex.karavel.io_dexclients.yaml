@@ -78,6 +78,11 @@ spec:
                 required:
                 - name
                 type: object
+              issuerURLKey:
+                default: issuerURL
+                description: IssuerKey allows to override the key used in the generated
+                  Secret for the issuer URL
+                type: string
               name:
                 description: Name is the Dex client name
                 type: string

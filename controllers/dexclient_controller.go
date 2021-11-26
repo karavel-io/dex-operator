@@ -19,7 +19,6 @@ package controllers
 import (
 	"context"
 	"github.com/karavel-io/dex-operator/dex"
-	"github.com/karavel-io/dex-operator/utils"
 	v1 "k8s.io/api/core/v1"
 	kuberrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -101,7 +100,7 @@ func (r *DexClientReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	host := d.Status.EndpointURL
 	finalizer := "clients.finalizers.dex.karavel.io"
 	if dc.ObjectMeta.DeletionTimestamp.IsZero() {
-		if !utils.ContainsString(dc.ObjectMeta.Finalizers, finalizer) {
+		if !controllerutil.ContainsFinalizer(&dc, finalizer) {
 			log.Info("adding finalizer")
 			controllerutil.AddFinalizer(&dc, finalizer)
 			if err := r.Update(ctx, &dc); err != nil {
@@ -109,7 +108,7 @@ func (r *DexClientReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			}
 		}
 	} else {
-		if utils.ContainsString(dc.ObjectMeta.Finalizers, finalizer) {
+		if controllerutil.ContainsFinalizer(&dc, finalizer) {
 			// our finalizer is present, so lets handle any external dependency
 			op, err := dex.DeleteDexClient(ctx, log, host, &dc)
 			if err != nil {
@@ -133,7 +132,7 @@ func (r *DexClientReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return r.ManageSuccess(ctx, &dc)
 	}
 
-	sec, secret, err := dex.Secret(&dc)
+	sec, secret, err := dex.Secret(&d, &dc)
 	if err != nil {
 		return r.ManageError(ctx, &dc, err)
 	}
